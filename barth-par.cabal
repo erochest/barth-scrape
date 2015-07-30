@@ -20,14 +20,20 @@ executable barth-par
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.8 && <4.9
-                     , text
-                     , repa
-                     , repa-algorithms
-                     , repa-io
+                     , optparse-applicative
+                     , aeson
+                     , bytestring
                      , cassava
+                     , errors
+                     , lens
+                     , parallel
+                     , text
+                     , unordered-containers
+                     , either
+                     , vector
   hs-source-dirs:      src
   ghc-options:         -O2
                        -threaded
                        -fprof-auto
-                       "-with-rtsopts=-N -s"
+                       "-with-rtsopts=-N"
   default-language:    Haskell2010
