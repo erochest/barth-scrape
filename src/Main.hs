@@ -9,29 +9,22 @@
 module Main where
 
 
-import           Control.Applicative
 import           Control.Arrow              ((&&&))
-import           Control.DeepSeq
 import           Control.Error
 import           Control.Lens
-import           Control.Monad.Trans.Either
 import           Data.Aeson
 import qualified Data.Aeson                 as A
-import qualified Data.ByteString            as B
 import qualified Data.ByteString.Lazy       as BL
 import qualified Data.ByteString.Lazy.Char8 as L8
-import           Data.Char
 import           Data.Csv                   hiding (Parser, header)
 import qualified Data.Csv                   as Csv
 import           Data.Data
 import           Data.Function
 import qualified Data.HashMap.Strict        as M
 import qualified Data.List                  as L
-import           Data.Maybe
 import           Data.Ord
 import qualified Data.Text                  as T
 import           Data.Traversable
-import           Data.Typeable
 import qualified Data.Vector                as V
 import qualified Data.Vector.Unboxed        as UV
 import           GHC.Generics
@@ -82,14 +75,14 @@ inputWeight :: Lens' InputRow Weight
 inputWeight = _3
 
 makeNodes :: InputByWord -> ([Node], TokenIndex)
-makeNodes = (id &&& index) . catMaybes . snd . mapAccumL toNode 0
+makeNodes = (id &&& indexTokens) . catMaybes . snd . mapAccumL toNode 0
     where
         toNode i rs@((_, n, _):_) =
             let topic = L.maximum $ map (view inputTopicId) rs
             in  (i + 1, Just $ Node n topic i)
         toNode i [] = (i, Nothing)
 
-        index = M.fromList . map (name &&& nodeId)
+        indexTokens = M.fromList . map (name &&& nodeId)
 
 makeLinks :: TokenIndex -> InputByWord -> [Link]
 makeLinks tindex byWord = concatMap (uncurry (loop tvectors)) tvectors
@@ -109,7 +102,7 @@ makeLinks tindex byWord = concatMap (uncurry (loop tvectors)) tvectors
                          | otherwise = Just . Link i j $ euclid iws jws
 
 euclid :: (UV.Unbox a, Floating a) => UV.Vector a -> UV.Vector a -> a
-euclid xs ys = sqrt . UV.sum . UV.map (^2) $ UV.zipWith (-) xs ys
+euclid xs ys = sqrt . UV.sum . UV.map (^(2::Int)) $ UV.zipWith (-) xs ys
 
 splitTabs :: FromRecord a => L8.ByteString -> Either String (V.Vector a)
 splitTabs = traverse (Csv.runParser . parseRecord . V.fromList . fmap L8.toStrict . L8.split '\t')
@@ -127,10 +120,10 @@ main = do
                         )
                .   splitTabs
                <$> BL.readFile inputFile
-        let (nodes, index) = makeNodes byWord
+        let (nodes, tokenIndex) = makeNodes byWord
         scriptIO . BL.writeFile outputFile
                  . A.encode
-                 $ Network nodes (makeLinks index byWord)
+                 $ Network nodes (makeLinks tokenIndex byWord)
     where
         getWord = view inputWord
 

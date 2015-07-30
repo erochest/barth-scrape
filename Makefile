@@ -2,7 +2,7 @@
 SRC=$(shell find src -name '*.hs')
 
 CABAL=stack
-FLAGS=--optimizations --pedantic --ghc-options '-with-rtsopts="-N -p -s -h -i0.1"'
+FLAGS=--optimizations --pedantic --ghc-options '-with-rtsopts="-N -s"'
 # FLAGS=--executable-profiling --library-profiling --ghc-options '-with-rtsopts="-N -p -s -h -i0.1"'
 
 all: init test docs package
