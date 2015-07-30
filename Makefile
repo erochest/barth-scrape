@@ -2,6 +2,8 @@
 SRC=$(shell find src -name '*.hs')
 
 CABAL=stack
+# FLAGS=--optimizations --pedantic
+FLAGS=--executable-profiling --library-profiling --ghc-options '-with-rtsopts=-N -p -s -h -i0.1'
 
 all: init test docs package
 
@@ -14,7 +16,7 @@ test: build
 	stack test
 
 run: build
-	stack exec -- {{projectName}}
+	stack exec -- barth-par -ibarth.weights -onetwork.json
 
 # docs:
 # generate api documentation
@@ -52,7 +54,7 @@ clean:
 distclean: clean
 
 build:
-	stack build
+	stack build $(FLAGS)
 
 watch:
 	ghcid "--command=stack ghci"
