@@ -27,6 +27,7 @@ executable barth-par
                      , errors
                      , lens
                      , parallel
+                     , deepseq
                      , text
                      , unordered-containers
                      , either

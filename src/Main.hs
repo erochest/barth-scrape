@@ -9,8 +9,9 @@
 module Main where
 
 
-import           Control.Arrow              ((&&&))
 import           Control.Applicative
+import           Control.Arrow              ((&&&))
+import           Control.DeepSeq
 import           Control.Error
 import           Control.Lens
 import           Control.Monad.Trans.Either
@@ -18,8 +19,10 @@ import           Data.Aeson
 import qualified Data.Aeson                 as A
 import qualified Data.ByteString            as B
 import qualified Data.ByteString.Lazy       as BL
+import qualified Data.ByteString.Lazy.Char8 as L8
 import           Data.Char
 import           Data.Csv                   hiding (Parser, header)
+import qualified Data.Csv                   as Csv
 import           Data.Data
 import           Data.Function
 import qualified Data.HashMap.Strict        as M
@@ -108,6 +111,11 @@ makeLinks tindex byWord = concatMap (uncurry (loop tvectors)) tvectors
 euclid :: (UV.Unbox a, Floating a) => UV.Vector a -> UV.Vector a -> a
 euclid xs ys = sqrt . UV.sum . UV.map (^2) $ UV.zipWith (-) xs ys
 
+splitTabs :: FromRecord a => L8.ByteString -> Either String (V.Vector a)
+splitTabs = traverse (Csv.runParser . parseRecord . V.fromList . fmap L8.toStrict . L8.split '\t')
+          . V.fromList
+          . L8.lines
+
 main :: IO ()
 main = do
     Options{..} <- execParser opts
@@ -117,15 +125,13 @@ main = do
                         . L.sortBy (comparing getWord)
                         . V.toList
                         )
-               .   decodeWith decodeOptions NoHeader
+               .   splitTabs
                <$> BL.readFile inputFile
         let (nodes, index) = makeNodes byWord
         scriptIO . BL.writeFile outputFile
                  . A.encode
                  $ Network nodes (makeLinks index byWord)
     where
-        decodeOptions = defaultDecodeOptions
-                      { decDelimiter = fromIntegral (ord '\t') }
         getWord = view inputWord
 
 
