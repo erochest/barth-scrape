@@ -10,7 +10,7 @@ module Main where
 
 
 import           Conduit
-import           Control.Arrow              ((&&&))
+import           Control.Arrow              ((&&&), (***))
 import           Control.Error
 import           Control.Lens
 import           Data.Aeson
@@ -28,6 +28,7 @@ import qualified Data.HashMap.Strict        as M
 import qualified Data.List                  as L
 import           Data.Ord
 import           Data.Traversable
+import           Data.Tuple
 import qualified Data.Vector                as V
 import qualified Data.Vector.Unboxed        as UV
 import           GHC.Generics
@@ -88,14 +89,13 @@ inputWeight :: Lens' InputRow Weight
 inputWeight = _3
 
 makeNodes :: InputByWord -> ([Node], TokenIndex)
-makeNodes = (id &&& indexTokens) . catMaybes . snd . mapAccumL toNode 0
+makeNodes = (catMaybes *** snd) . swap . mapAccumL toNode (0, M.empty)
     where
-        toNode i rs@((_, n, _):_) =
-            let topic = L.maximum $ map (view inputTopicId) rs
-            in  (i + 1, Just $ Node n topic i)
+        toNode (i, index) rs@((_, n, _):_) =
+            let topic  = L.maximum $ map (view inputTopicId) rs
+                index' = M.insert n i index
+            in  ((i + 1, index), Just $ Node n topic i)
         toNode i [] = (i, Nothing)
-
-        indexTokens = M.fromList . map (name &&& nodeId)
 
 makeLinks :: TokenIndex -> InputByWord -> [Link]
 makeLinks tindex byWord = concatMap (uncurry (loop tvectors)) tvectors
