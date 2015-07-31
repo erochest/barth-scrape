@@ -5,6 +5,10 @@ CABAL=stack
 FLAGS=--optimizations --pedantic --ghc-options '-with-rtsopts="-N -s"'
 # FLAGS=--executable-profiling --library-profiling --ghc-options '-with-rtsopts="-N -p -s -h -i0.1"'
 
+# INPUT=barth.weights
+INPUT=barth.10000
+# INPUT=barth.1000
+
 all: init test docs package
 
 init: stack.yaml
@@ -16,7 +20,12 @@ test: build
 	stack test
 
 run: build
-	stack exec -- barth-par -ibarth.weights -onetwork.json
+	stack exec -- barth-par -i$(INPUT) -onetwork.json
+
+barth-par.ps: src/Main.hs
+	make run
+	hp2ps barth-par.hp
+	open barth-par.ps
 
 # docs:
 # generate api documentation
