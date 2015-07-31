@@ -10,29 +10,29 @@ module Main where
 
 
 import           Conduit
-import           Control.Arrow              ((&&&), (***))
+import           Control.Arrow               ((***))
 import           Control.Error
 import           Control.Lens
+import           Control.Parallel.Strategies
 import           Data.Aeson
-import qualified Data.Aeson                 as A
-import qualified Data.ByteString.Char8      as B8
-import qualified Data.ByteString.Lazy       as BL
-import qualified Data.ByteString.Lazy.Char8 as L8
-import qualified Data.Conduit.List          as CL
-import           Data.Csv                   hiding (Parser, header)
-import qualified Data.Csv                   as Csv
+import qualified Data.Aeson                  as A
+import qualified Data.ByteString.Char8       as B8
+import qualified Data.ByteString.Lazy        as BL
+import qualified Data.ByteString.Lazy.Char8  as L8
+import           Data.Csv                    hiding (Parser, header)
+import qualified Data.Csv                    as Csv
 import           Data.Data
 import           Data.Function
 import           Data.Hashable
-import qualified Data.HashMap.Strict        as M
-import qualified Data.List                  as L
+import qualified Data.HashMap.Strict         as M
+import qualified Data.List                   as L
 import           Data.Ord
 import           Data.Traversable
 import           Data.Tuple
-import qualified Data.Vector                as V
-import qualified Data.Vector.Unboxed        as UV
+import qualified Data.Vector                 as V
+import qualified Data.Vector.Unboxed         as UV
 import           GHC.Generics
-import           Options.Applicative        hiding ((<$>), (<*>))
+import           Options.Applicative         hiding ((<$>), (<*>))
 
 
 type TopicId     = Int
@@ -71,6 +71,8 @@ data Link
 
 instance ToJSON Link
 
+instance NFData Link
+
 data Network
         = Network
         { nodes :: [Node]
@@ -91,14 +93,15 @@ inputWeight = _3
 makeNodes :: InputByWord -> ([Node], TokenIndex)
 makeNodes = (catMaybes *** snd) . swap . mapAccumL toNode (0, M.empty)
     where
-        toNode (i, index) rs@((_, n, _):_) =
+        toNode (i, idx) rs@((_, n, _):_) =
             let topic  = L.maximum $ map (view inputTopicId) rs
-                index' = M.insert n i index
-            in  ((i + 1, index), Just $ Node n topic i)
+                index' = M.insert n i idx
+            in  ((i + 1, index'), Just $ Node n topic i)
         toNode i [] = (i, Nothing)
 
 makeLinks :: TokenIndex -> InputByWord -> [Link]
 makeLinks tindex byWord = concatMap (uncurry (loop tvectors)) tvectors
+    -- ^ par
     where
         toVector rs@((_, t, _):_) =   (,)
                                   <$> M.lookup t tindex
@@ -114,33 +117,44 @@ makeLinks tindex byWord = concatMap (uncurry (loop tvectors)) tvectors
         link i iws j jws | i == j    = Nothing
                          | otherwise = Just . Link i j $ euclid iws jws
 
-euclid :: (UV.Unbox a, Floating a) => UV.Vector a -> UV.Vector a -> a
-euclid xs ys = sqrt . UV.sum . UV.map (^(2::Int)) $ UV.zipWith (-) xs ys
+euclid :: UV.Vector Double -> UV.Vector Double -> Double
+euclid xs ys = sqrt . UV.sum . UV.map (**2) $ UV.zipWith (-) xs ys
 
 splitTabs :: FromRecord a => L8.ByteString -> Either String (V.Vector a)
 splitTabs = traverse (Csv.runParser . parseRecord . V.fromList . fmap L8.toStrict . L8.split '\t')
           . V.fromList
           . L8.lines
 
-lazyWriteNetwork :: FilePath -> Network -> Script ()
-lazyWriteNetwork output Network{..} =
-    runResourceT $  (  CL.sourceList ["{\"nodes\":" :: BL.ByteString]
-                    >> injectJsonArray nodes
-                    >> CL.sourceList [",\"links\":"]
-                    >> injectJsonArray links
-                    >> CL.sourceList ["}"]
-                    )
-                 $$ sinkFile output
+lazyWriteNetwork :: Int -> FilePath -> Network -> Script ()
+lazyWriteNetwork chunkSize output n = runResourceT $ doc n $$ sinkFile output
+    where
+        doc Network{..} = do
+            yield "{\"nodes\":"
+            injectJsonArray $ smartMap chunkSize A.encode nodes
+            yield ",\"links\":"
+            injectJsonArray $ smartMap chunkSize A.encode links
+            yield "}"
 
-injectJsonArray :: (ToJSON a, Monad m) => [a] -> Source m BL.ByteString
+injectJsonArray :: Monad m => [BL.ByteString] -> Source m BL.ByteString
 injectJsonArray []     = yield "[]"
 injectJsonArray (x:xs) = do
     yield "["
-    yield $ A.encode x
+    yield x
     mapM_ item xs
     yield "]"
     where
-        item y = yield "," >> yield (A.encode y)
+        item y = yield "," >> yield y
+        {-# INLINE item #-}
+
+smartMap :: NFData y => Int -> (x -> y) -> [x] -> [y]
+smartMap 0  f xs = map f xs
+smartMap 1  f xs = parMap rdeepseq f xs
+smartMap cs f xs = (map f xs) `using` (parListChunk cs rdeepseq)
+
+smartList :: NFData y => Int -> [y] -> [y]
+smartList 0  ys = ys
+smartList 1  ys = ys `using` parList rdeepseq
+smartList cs ys = ys `using` parListChunk cs rdeepseq
 
 main :: IO ()
 main = do
@@ -154,7 +168,9 @@ main = do
                .   splitTabs
                <$> BL.readFile inputFile
         let (nodes, tokenIndex) = makeNodes byWord
-        lazyWriteNetwork outputFile . Network nodes $ makeLinks tokenIndex byWord
+        lazyWriteNetwork chunkSize outputFile
+            . Network nodes
+            $ makeLinks tokenIndex byWord
     where
         getWord = view inputWord
 
@@ -163,14 +179,18 @@ data Options
         = Options
         { inputFile  :: !FilePath
         , outputFile :: !FilePath
+        , chunkSize  :: !Int
         } deriving (Show)
 
 opts' :: Parser Options
 opts' =   Options
-      <$> strOption (  short 'i' <> long "input" <> metavar "TSV_FILE"
-                    <> help "The input file (the weights file from MALLET).")
-      <*> strOption (  short 'o' <> long "output" <> metavar "JSON_FILE"
-                    <> help "The JSON file to write the output to.")
+      <$> strOption   (  short 'i' <> long "input" <> metavar "TSV_FILE"
+                      <> help "The input file (the weights file from MALLET).")
+      <*> strOption   (  short 'o' <> long "output" <> metavar "JSON_FILE"
+                      <> help "The JSON file to write the output to.")
+      <*> option auto (  short 'c' <> long "chunk-size" <> metavar "CHUNK_SIZE" <> value 0
+                      <> help "The size of chunks to divide sequences into for parallel\
+                         \ processing. (Default is 0, which means no parallelization.)")
 
 opts :: ParserInfo Options
 opts =   info (helper <*> opts')

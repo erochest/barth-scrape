@@ -3,12 +3,12 @@ SRC=$(shell find src -name '*.hs')
 
 CABAL=stack
 FLAGS=--optimizations --pedantic --ghc-options '-threaded -with-rtsopts="-N -s"'
-# FLAGS=--optimizations --executable-profiling --library-profiling --ghc-options '-threaded -with-rtsopts="-N -s"'
+# FLAGS=--optimizations --executable-profiling --library-profiling --ghc-options '-threaded -with-rtsopts="-N -s -p"'
 # FLAGS=--executable-profiling --library-profiling --ghc-options '-threaded -with-rtsopts="-N -p -s -h -i0.1"'
 
-# INPUT=barth.weights
+INPUT=barth.weights
 # INPUT=barth.10000
-INPUT=barth.5000
+# INPUT=barth.5000
 # INPUT=barth.1000
 # INPUT=barth.100
 
