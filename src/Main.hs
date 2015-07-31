@@ -94,14 +94,14 @@ makeNodes :: InputByWord -> ([Node], TokenIndex)
 makeNodes = (catMaybes *** snd) . swap . mapAccumL toNode (0, M.empty)
     where
         toNode (i, idx) rs@((_, n, _):_) =
-            let topic  = L.maximum $ map (view inputTopicId) rs
+            let topic  = view inputTopicId
+                       $ L.maximumBy (comparing (view inputWeight)) rs
                 index' = M.insert n i idx
             in  ((i + 1, index'), Just $ Node n topic i)
         toNode i [] = (i, Nothing)
 
 makeLinks :: TokenIndex -> InputByWord -> [Link]
 makeLinks tindex byWord = concatMap (uncurry (loop tvectors)) tvectors
-    -- ^ par
     where
         toVector rs@((_, t, _):_) =   (,)
                                   <$> M.lookup t tindex
