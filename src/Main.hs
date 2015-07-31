@@ -9,21 +9,24 @@
 module Main where
 
 
+import           Conduit
 import           Control.Arrow              ((&&&))
 import           Control.Error
 import           Control.Lens
 import           Data.Aeson
 import qualified Data.Aeson                 as A
+import qualified Data.ByteString.Char8      as B8
 import qualified Data.ByteString.Lazy       as BL
 import qualified Data.ByteString.Lazy.Char8 as L8
+import qualified Data.Conduit.List          as CL
 import           Data.Csv                   hiding (Parser, header)
 import qualified Data.Csv                   as Csv
 import           Data.Data
 import           Data.Function
+import           Data.Hashable
 import qualified Data.HashMap.Strict        as M
 import qualified Data.List                  as L
 import           Data.Ord
-import qualified Data.Text                  as T
 import           Data.Traversable
 import qualified Data.Vector                as V
 import qualified Data.Vector.Unboxed        as UV
@@ -32,12 +35,22 @@ import           Options.Applicative        hiding ((<$>), (<*>))
 
 
 type TopicId     = Int
-type Token       = T.Text
 type Weight      = Double
 type InputRow    = (TopicId, Token, Weight)
 type InputByWord = [[InputRow]]
 type WeightV     = UV.Vector Weight
 type TokenIndex  = M.HashMap Token Int
+
+newtype Token = Token { unToken :: B8.ByteString }
+                deriving (Show, Eq, Data, Typeable, Generic, Ord)
+
+instance Hashable Token
+
+instance ToJSON Token where
+    toJSON = toJSON . B8.unpack . unToken
+
+instance FromField Token where
+    parseField = return . Token
 
 data Node
         = Node
@@ -68,7 +81,7 @@ instance ToJSON Network
 inputTopicId :: Lens' InputRow TopicId
 inputTopicId = _1
 
-inputWord :: Lens' InputRow T.Text
+inputWord :: Lens' InputRow Token
 inputWord = _2
 
 inputWeight :: Lens' InputRow Weight
@@ -109,6 +122,26 @@ splitTabs = traverse (Csv.runParser . parseRecord . V.fromList . fmap L8.toStric
           . V.fromList
           . L8.lines
 
+lazyWriteNetwork :: FilePath -> Network -> Script ()
+lazyWriteNetwork output Network{..} =
+    runResourceT $  (  CL.sourceList ["{\"nodes\":" :: BL.ByteString]
+                    >> injectJsonArray nodes
+                    >> CL.sourceList [",\"links\":"]
+                    >> injectJsonArray links
+                    >> CL.sourceList ["}"]
+                    )
+                 $$ sinkFile output
+
+injectJsonArray :: (ToJSON a, Monad m) => [a] -> Source m BL.ByteString
+injectJsonArray []     = yield "[]"
+injectJsonArray (x:xs) = do
+    yield "["
+    yield $ A.encode x
+    mapM_ item xs
+    yield "]"
+    where
+        item y = yield "," >> yield (A.encode y)
+
 main :: IO ()
 main = do
     Options{..} <- execParser opts
@@ -121,9 +154,7 @@ main = do
                .   splitTabs
                <$> BL.readFile inputFile
         let (nodes, tokenIndex) = makeNodes byWord
-        scriptIO . BL.writeFile outputFile
-                 . A.encode
-                 $ Network nodes (makeLinks tokenIndex byWord)
+        lazyWriteNetwork outputFile . Network nodes $ makeLinks tokenIndex byWord
     where
         getWord = view inputWord
 

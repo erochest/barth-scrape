@@ -24,10 +24,15 @@ executable barth-par
                      , aeson
                      , bytestring
                      , cassava
+                     , conduit
+                     , conduit-extra
+                     , conduit-combinators
+                     , conduit
                      , errors
                      , lens
                      , parallel
                      , deepseq
+                     , hashable
                      , text
                      , unordered-containers
                      , either
