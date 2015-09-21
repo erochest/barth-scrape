@@ -1,4 +1,3 @@
-
 SRC=$(shell find src -name '*.hs')
 
 CABAL=stack
@@ -6,23 +5,27 @@ FLAGS=--optimizations --pedantic --ghc-options '-threaded -with-rtsopts="-N -s"'
 # FLAGS=--optimizations --executable-profiling --library-profiling --ghc-options '-threaded -with-rtsopts="-N -s -p"'
 # FLAGS=--executable-profiling --library-profiling --ghc-options '-threaded -with-rtsopts="-N -p -s -h -i0.1"'
 
-INPUT=barth.weights
+# INPUT=barth.weights
 # INPUT=barth.10000
 # INPUT=barth.5000
-# INPUT=barth.1000
+INPUT=barth.1000
 # INPUT=barth.100
 
-CHUNK_SIZE=128
+# CHUNK_SIZE=0
+# CHUNK_SIZE=128
+# CHUNK_SIZE=1024
+# CHUNK_SIZE=1048576
+CHUNK_SIZE=33554432
 
 all: init test docs package
 
 init: stack.yaml
 
 stack.yaml:
-	stack init --prefer-nightly
+	stack init
 
-test: build
-	stack test
+test:
+	stack test barth-par:test:barth-par-specs $(FLAG)
 
 run: build
 	stack exec -- barth-par -i$(INPUT) -onetwork.json -c$(CHUNK_SIZE)
@@ -33,10 +36,13 @@ bench: build
 		echo; \
 		done
 
-barth-par.ps: src/Main.hs
+barth-par.ps: $(SRC) app/Main.hs
 	make run
 	hp2ps barth-par.hp
 	open barth-par.ps
+
+profile:
+	stack bench $(FLAGS)
 
 # docs:
 # generate api documentation
@@ -59,16 +65,17 @@ configure:
 	cabal configure --package-db=clear --package-db=global --package-db=`stack path --snapshot-pkg-db` --package-db=`stack path --local-pkg-db`
 
 install:
-	stack install
+	stack install $(FLAGS)
 
 tags: ${SRC}
 	codex update
 
 hlint:
-	hlint *.hs src specs
+	hlint *.hs app benchmark src specs
 
 clean:
 	stack clean
+	-rm -rf *.hp *.prof *.ps *.aux
 	codex cache clean
 
 distclean: clean
@@ -77,10 +84,10 @@ build:
 	stack build $(FLAGS)
 
 watch:
-	ghcid "--command=stack ghci"
+	ghcid "--command=stack ghci --main-is barth-par:exe:barth-par"
 
-restart: distclean init build
+restart: distclean build
 
 rebuild: clean build
 
-.PHONY: all init configure test run clean distclean build rebuild hlint watch tags bench
+.PHONY: all init configure test bench package upload configure install tags hlint clean distclean build watch restart rebuild
