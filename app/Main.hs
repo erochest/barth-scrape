@@ -160,7 +160,7 @@ main :: IO ()
 main = do
     Options{..} <- execParser opts
     runScript $ do
-        byWord <-  EitherT
+        byWord <-  ExceptT
                $   fmap ( L.groupBy ((==) `on` getWord)
                         . L.sortBy (comparing getWord)
                         . V.toList
