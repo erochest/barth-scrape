@@ -14,16 +14,12 @@ import           Control.Arrow               ((***))
 import           Control.Error
 import           Control.Lens
 import           Control.Parallel.Strategies
-import           Data.Aeson
 import qualified Data.Aeson                  as A
-import qualified Data.ByteString.Char8       as B8
 import qualified Data.ByteString.Lazy        as BL
 import qualified Data.ByteString.Lazy.Char8  as L8
 import           Data.Csv                    hiding (Parser, header)
 import qualified Data.Csv                    as Csv
-import           Data.Data
 import           Data.Function
-import           Data.Hashable
 import qualified Data.HashMap.Strict         as M
 import qualified Data.List                   as L
 import           Data.Ord
@@ -31,55 +27,10 @@ import           Data.Traversable
 import           Data.Tuple
 import qualified Data.Vector                 as V
 import qualified Data.Vector.Unboxed         as UV
-import           GHC.Generics
 import           Options.Applicative         hiding ((<$>), (<*>))
 
+import           BarthPar.Types
 
-type TopicId     = Int
-type Weight      = Double
-type InputRow    = (TopicId, Token, Weight)
-type InputByWord = [[InputRow]]
-type WeightV     = UV.Vector Weight
-type TokenIndex  = M.HashMap Token Int
-
-newtype Token = Token { unToken :: B8.ByteString }
-                deriving (Show, Eq, Data, Typeable, Generic, Ord)
-
-instance Hashable Token
-
-instance ToJSON Token where
-    toJSON = toJSON . B8.unpack . unToken
-
-instance FromField Token where
-    parseField = return . Token
-
-data Node
-        = Node
-        { name   :: !Token
-        , topic  :: !TopicId
-        , nodeId :: !Int
-        } deriving (Show, Eq, Data, Typeable, Generic)
-
-instance ToJSON Node
-
-data Link
-        = Link
-        { source :: !Int
-        , target :: !Int
-        , weight :: !Weight
-        } deriving (Show, Data, Typeable, Generic)
-
-instance ToJSON Link
-
-instance NFData Link
-
-data Network
-        = Network
-        { nodes :: [Node]
-        , links :: [Link]
-        } deriving (Show, Data, Typeable, Generic)
-
-instance ToJSON Network
 
 inputTopicId :: Lens' InputRow TopicId
 inputTopicId = _1
