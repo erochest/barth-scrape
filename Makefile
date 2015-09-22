@@ -1,7 +1,7 @@
 SRC=$(shell find src -name '*.hs')
 
 CABAL=stack
-FLAGS=--optimizations --pedantic --ghc-options '-threaded -with-rtsopts="-N -s"'
+FLAGS=--pedantic
 # FLAGS=--optimizations --executable-profiling --library-profiling --ghc-options '-threaded -with-rtsopts="-N -s -p"'
 # FLAGS=--executable-profiling --library-profiling --ghc-options '-threaded -with-rtsopts="-N -p -s -h -i0.1"'
 
