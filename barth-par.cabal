@@ -16,7 +16,8 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     BarthPar.Graph
+  exposed-modules:     BarthPar.Actions
+                     , BarthPar.Graph
                      , BarthPar.Data
                      , BarthPar.Lens
                      , BarthPar.Parallel
@@ -47,21 +48,10 @@ executable barth-par
   build-depends:       base >=4.8 && <4.9
                      , barth-par
                      , optparse-applicative
-                     , aeson
                      , bytestring
-                     , cassava
-                     , conduit
-                     , conduit-extra
-                     , conduit-combinators
                      , errors
-                     , lens
-                     , parallel
-                     , deepseq
-                     , hashable
                      , text
-                     , unordered-containers
                      , either
-                     , vector
   hs-source-dirs:      app
   ghc-options:         -O2
                        -threaded

@@ -6,6 +6,6 @@ import           Criterion.Main
 
 
 main :: IO ()
-main = do
+main =
   defaultMain [
        ]

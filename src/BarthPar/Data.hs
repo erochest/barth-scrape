@@ -7,6 +7,7 @@ module BarthPar.Data where
 
 import           Conduit
 import           Control.Error
+import           Control.Lens
 import qualified Data.Aeson                 as A
 import qualified Data.ByteString.Lazy       as BL
 import qualified Data.ByteString.Lazy.Char8 as L8
@@ -14,6 +15,7 @@ import           Data.Csv
 import qualified Data.Csv                   as Csv
 import qualified Data.Vector                as V
 
+import           BarthPar.Lens
 import           BarthPar.Parallel
 import           BarthPar.Types
 
@@ -43,3 +45,6 @@ injectJsonArray (x:xs) = do
     where
         item y = yield "," >> yield y
         {-# INLINE item #-}
+
+getWord :: InputRow -> Token
+getWord = view inputWord

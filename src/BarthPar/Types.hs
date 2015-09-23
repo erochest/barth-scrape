@@ -16,6 +16,13 @@ import qualified Data.Vector.Unboxed         as UV
 import           GHC.Generics
 
 
+data Actions
+        = CsvToJson
+        { inputFile  :: !FilePath
+        , outputFile :: !FilePath
+        , chunkSize  :: !Int
+        } deriving (Show)
+
 type TopicId     = Int
 type Weight      = Double
 type InputRow    = (TopicId, Token, Weight)
