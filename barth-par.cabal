@@ -16,15 +16,24 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     BarthPar.Types
-  --                    , BarthPar.Types
+  exposed-modules:     BarthPar.Graph
+                     , BarthPar.Data
+                     , BarthPar.Lens
+                     , BarthPar.Parallel
+                     , BarthPar.Types
+                     , BarthPar.Utils
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.8 && <4.9
                      , aeson
                      , bytestring
                      , cassava
+                     , conduit
+                     , conduit-extra
+                     , conduit-combinators
+                     , errors
                      , hashable
+                     , lens
                      , parallel
                      , unordered-containers
                      , vector
@@ -33,7 +42,7 @@ library
 
 executable barth-par
   main-is:             Main.hs
-  -- other-modules:       
+  other-modules:       Opts
   -- other-extensions:    
   build-depends:       base >=4.8 && <4.9
                      , barth-par
@@ -44,7 +53,6 @@ executable barth-par
                      , conduit
                      , conduit-extra
                      , conduit-combinators
-                     , conduit
                      , errors
                      , lens
                      , parallel
