@@ -1,1 +1,1 @@
-:load Main
+:load Main Opts src/BarthPar/Actions.hs src/BarthPar/Data.hs src/BarthPar/Graph.hs src/BarthPar/Lens.hs src/BarthPar/Parallel.hs src/BarthPar/Scrape.hs src/BarthPar/Types.hs src/BarthPar/Utils.hs

@@ -20,11 +20,23 @@ csvToJsonOpts =
                             \ parallel processing. (Default is 0, which means\
                             \ no parallelization.)")
 
+scrapeOpts :: Parser Actions
+scrapeOpts =
+    Scrape
+    <$> strOption (  short 'u' <> long "root-url" <> metavar "URL"
+                  <> help "The URL for the root.")
+    <*> strOption (  short 'o' <> long "output" <> metavar "DIRNAME"
+                  <> help "The directory to put the scraped documents into.")
+
 opts' :: Parser Actions
 opts' = subparser
         (  command "csv-to-json"
-                       (info (helper <*> csvToJsonOpts)
+               (info (helper <*> csvToJsonOpts)
                         (progDesc "Convert the MALLET CSV output to JSON."))
+        <> command "scrape"
+               (info (helper <*> scrapeOpts)
+                         (progDesc "Download and extract the text from the\
+                                   \ site."))
         )
 
 opts :: ParserInfo Actions

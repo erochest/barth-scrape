@@ -13,6 +13,7 @@ import qualified Data.Vector          as V
 
 import           BarthPar.Data
 import           BarthPar.Graph
+import           BarthPar.Scrape
 import           BarthPar.Types
 
 
@@ -25,8 +26,10 @@ action CsvToJson{..} = do
                     . V.toList
                     )
            .   splitTabs
-           <$> BL.readFile inputFile
+           <$> BL.readFile jsonInputFile
     let (nodes, tokenIndex) = makeNodes byWord
-    lazyWriteNetwork chunkSize outputFile
+    lazyWriteNetwork jsonChunkSize jsonOutputFile
         . Network nodes
         $ makeLinks tokenIndex byWord
+
+action Scrape{..} = scrape scrapeUrl scrapeOutputDir
