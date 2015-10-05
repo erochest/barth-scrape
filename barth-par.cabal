@@ -28,6 +28,7 @@ library
   -- other-extensions:
   build-depends:       base >=4.8 && <4.9
                      , aeson
+                     , async
                      , bytestring
                      , cassava
                      , conduit
@@ -38,6 +39,7 @@ library
                      , hashable
                      , html-conduit
                      , lens
+                     , mtl
                      , network-uri
                      , parallel
                      , text
@@ -83,12 +85,18 @@ test-suite barth-par-specs
   ghc-options:         -threaded -rtsopts -O2
   hs-source-dirs:      specs
   main-is:             Specs.hs
-  -- other-modules:       
+  other-modules:       BarthPar.ScrapeSpec
   build-depends:       base >=4.8 && <4.9
                      , barth-par
                      , QuickCheck
                      , HUnit
                      , hspec
+                     , bytestring
+                     , errors
+                     , html-conduit
+                     , lens
+                     , text
+                     , xml-conduit
   default-language:    Haskell2010
 
 -- source-repository head
