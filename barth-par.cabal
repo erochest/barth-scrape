@@ -24,16 +24,19 @@ library
                      , BarthPar.Scrape
                      , BarthPar.Types
                      , BarthPar.Utils
+                     , BarthPar.XML
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.8 && <4.9
                      , aeson
                      , async
                      , bytestring
+                     , c18sgml
                      , cassava
                      , conduit
                      , conduit-extra
                      , conduit-combinators
+                     , containers
                      , errors
                      , filepath
                      , hashable
@@ -42,6 +45,7 @@ library
                      , mtl
                      , network-uri
                      , parallel
+                     , tagsoup
                      , text
                      , unordered-containers
                      , vector

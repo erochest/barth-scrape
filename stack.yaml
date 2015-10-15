@@ -1,6 +1,7 @@
 flags: {}
 packages:
 - '.'
+- ../c18sgml
 extra-deps:
 - cassava-conduit-0.2.0
 resolver: lts-3.6

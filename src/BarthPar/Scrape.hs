@@ -4,22 +4,25 @@
 module BarthPar.Scrape where
 
 
+import qualified C18.Balance          as C18
 import           Control.Arrow
 import           Control.Error
 import           Control.Lens
 import           Control.Monad
-import qualified Data.Text       as T
-import qualified Data.Text.IO    as TIO
+import qualified Data.ByteString.Lazy as B
+import qualified Data.Text            as T
+import           Data.Text.Encoding
+import qualified Data.Text.IO         as TIO
+import           Data.Traversable
 import           Network.URI
 import           Network.Wreq
+import           Text.HTML.TagSoup
+import qualified Text.XML             as XML
+import           Text.XML.Cursor
 -- import           System.FilePath
 -- import           Control.Concurrent.Async
-import           Data.Bifunctor
-import           Data.Foldable
-import qualified Data.List       as L
-import           Text.HTML.DOM
-import qualified Text.XML        as XML
-import           Text.XML.Cursor
+
+import           BarthPar.XML
 
 import           Debug.Trace
 
@@ -49,40 +52,18 @@ data Page
     } deriving (Show, Eq)
 
 
-unnest :: XML.Name -> XML.Node -> (Maybe XML.Node, [XML.Node])
-unnest name (XML.NodeElement el)
-    | XML.elementName el == name = (Nothing , el' : named)
-    | otherwise                  = (Just el', named)
-    where
-      (children, named) = (catMaybes `bimap` concat)
-                          . L.unzip
-                          . map (unnest name)
-                          $ XML.elementNodes el
-      el' = XML.NodeElement $ el { XML.elementNodes = children }
-unnest _ n = (Just n, [])
-
-unnestSplice :: XML.Name -> XML.Node -> XML.Node
-unnestSplice name (XML.NodeElement parent) =
-    XML.NodeElement . setChildren parent . foldr' (step name) []
-           $ XML.elementNodes parent
-    where
-      step :: XML.Name -> XML.Node -> [XML.Node] -> [XML.Node]
-      step nm n accum = let (n', tail) = unnest nm n
-                        in  maybe id (:) n' $ tail ++ accum
-
-      setChildren :: XML.Element -> [XML.Node] -> XML.Element
-      setChildren el ns = el { XML.elementNodes = ns }
-
-unnestSplice _ n = n
-
-hasName :: XML.Node -> XML.Name -> Bool
-hasName (XML.NodeElement el) n = n == XML.elementName el
-hasName _                    _ = False
+unnest :: [Tag T.Text] -> XML.Document
+unnest = fromMaybe (XML.parseText_ XML.def "<div/>")
+         . tagsToDocument
+         . concat
+         . snd
+         . mapAccumL (C18.denestTag "p") []
 
 dl :: URI -> Script XML.Document
 dl rootUrl = do
     scriptIO . putStrLn $ "DOWNLOAD: " ++ uri
-    scriptIO $ parseLBS . view responseBody <$> get uri
+    scriptIO $ unnest . parseTags . decodeUtf8 . B.toStrict . view responseBody
+                 <$> get uri
     where
       uri = show rootUrl
 
