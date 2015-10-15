@@ -71,7 +71,7 @@ watch :: Show a => String -> a -> a
 watch msg x = trace (msg ++ ": " ++ show x) x
 
 scrape :: FilePath -> String -> Script ()
-scrape outputDir rootUrl = do
+scrape outputDir rootUrl =
     case parseURI rootUrl of
       Just uri -> scrapeTOC uri >>= mapM_ (writePage outputDir)
       Nothing  -> return ()
