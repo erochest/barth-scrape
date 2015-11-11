@@ -37,8 +37,10 @@ library
                      , conduit-extra
                      , conduit-combinators
                      , containers
+                     , directory
                      , errors
                      , filepath
+                     , groom
                      , hashable
                      , html-conduit
                      , lens
@@ -47,6 +49,7 @@ library
                      , parallel
                      , tagsoup
                      , text
+                     , text-format
                      , unordered-containers
                      , vector
                      , wreq
@@ -89,7 +92,7 @@ test-suite barth-par-specs
   ghc-options:         -threaded -rtsopts -O2
   hs-source-dirs:      specs
   main-is:             Specs.hs
-  other-modules:       BarthPar.ScrapeSpec
+  -- other-modules:       BarthPar.ScrapeSpec
   build-depends:       base >=4.8 && <4.9
                      , barth-par
                      , QuickCheck

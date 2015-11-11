@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 
@@ -5,18 +6,26 @@ module BarthPar.Scrape where
 
 
 import qualified C18.Balance          as C18
-import           Control.Arrow
+import           C18.Types
+import           Control.Arrow        hiding (left)
 import           Control.Error
 import           Control.Lens
 import           Control.Monad
 import qualified Data.ByteString.Lazy as B
+-- import qualified Data.Set             as S
 import qualified Data.Text            as T
 import           Data.Text.Encoding
+import           Data.Text.Format
 import qualified Data.Text.IO         as TIO
+import qualified Data.Text.Lazy       as TL
 import           Data.Traversable
 import           Network.URI
 import           Network.Wreq
+import           System.Directory
+import           System.IO
+import           Text.Groom
 import           Text.HTML.TagSoup
+import           Text.XML
 import qualified Text.XML             as XML
 import           Text.XML.Cursor
 -- import           System.FilePath
@@ -52,18 +61,75 @@ data Page
     } deriving (Show, Eq)
 
 
+-- TODO: The tag sets of these should be bundled into one, easy-to-use
+-- function in `c18sgml`. Also need to get a real list from the HTML
+-- spec.
+
 unnest :: [Tag T.Text] -> XML.Document
 unnest = fromMaybe (XML.parseText_ XML.def "<div/>")
          . tagsToDocument
          . concat
          . snd
-         . mapAccumL (C18.denestTag "p") []
+         . mapAccumL (C18.denestTag trans) []
+    where
+      trans = DeNestTrans
+              ["p", "li", "td", "tr", "table"]
+              ["meta", "br", "hr", "area", "img"]
+
+findFileName :: Format -> Int -> Script FilePath
+findFileName template n = do
+  exists <- scriptIO $ doesFileExist filename
+  if exists
+  then findFileName template $ succ n
+  else return filename
+  where
+    filename = TL.unpack . format template . Only $ left 3 '0' n
+
+dumpPage :: String -> XML.Document -> Script XML.Document
+dumpPage source doc = do
+  filename <- findFileName "dump/page-{}.html" 0
+  scriptIO $ withFile filename WriteMode $ \f -> do
+                     TIO.hPutStrLn f "<!--"
+                     hprint f "source: {}\n" $ Only source
+                     TIO.hPutStrLn f "-->\n"
+                     TIO.hPutStr f . TL.toStrict
+                            $ XML.renderText (XML.def
+                                             { rsPretty = True
+                                             }) doc
+  return doc
+
+dumpPrint :: Show a => String -> a -> Script a
+dumpPrint source x = do
+  filename <- findFileName "dump/show-{}.html" 0
+  scriptIO $ withFile filename WriteMode $ \f -> do
+                       TIO.hPutStrLn f "---"
+                       hprint f "source: {}\n" $ Only source
+                       TIO.hPutStrLn f "---\n"
+                       TIO.hPutStrLn f . T.pack $ groom x
+  return x
+
+dumpText :: String -> T.Text -> Script T.Text
+dumpText source x = do
+  filename <- findFileName "dump/text-{}.html" 0
+  scriptIO . TIO.writeFile filename $ mconcat
+               [ "---\n"
+               , T.pack source, "\n"
+               , "===\n"
+               , x
+               ]
+  return x
+
+dumpEl :: String -> XML.Element -> Script XML.Element
+dumpEl source el = do
+    void . dumpPage source $ XML.Document (XML.Prologue [] Nothing []) el []
+    return el
 
 dl :: URI -> Script XML.Document
 dl rootUrl = do
     scriptIO . putStrLn $ "DOWNLOAD: " ++ uri
-    scriptIO $ unnest . parseTags . decodeUtf8 . B.toStrict . view responseBody
-                 <$> get uri
+    dumpPage uri . unnest . parseTags
+        =<< dumpText uri . decodeUtf8 . B.toStrict . view responseBody
+        =<< scriptIO (get uri)
     where
       uri = show rootUrl
 
@@ -88,10 +154,9 @@ smapConcurrently = mapM
 scrapeTOCPage :: URI -> T.Text -> (T.Text -> Bool) -> Script [(T.Text, URI)]
 scrapeTOCPage uri title p = do
     doc <- dl uri
-    -- TODO: remove `take 1`
-    return . take 1 . mapMaybe (sequenceA . fmap (appendUri uri))
-           $ filter (p . fst)
-           ( fromDocument doc $// tocEntries >=> tocPair title)
+    mapMaybe (sequenceA . fmap (appendUri uri)) . filter (p . fst)
+                 <$> dumpPrint ("scrapeTOCPage \"" ++ T.unpack title ++ "\"")
+                         (fromDocument doc $// tocEntries >=> tocPair title)
 
 appendUri :: URI -> T.Text -> Maybe URI
 appendUri base = fmap (`nonStrictRelativeTo` base)
@@ -117,7 +182,7 @@ isContent :: T.Text -> Cursor -> Bool
 isContent c el = (== c) . T.concat $ el $// content
 
 tocEntries :: Cursor -> [Cursor]
-tocEntries c = c $// laxElement "table" &// laxElement "td" &// laxElement "i"
+tocEntries c = c $// laxElement "i"
 
 -- | This takes the link text to find and a cursor positioned on the <i>
 -- elements surrounding the titles, and it returns a list of titles and
