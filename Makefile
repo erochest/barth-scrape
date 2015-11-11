@@ -30,6 +30,7 @@ test:
 	stack test barth-par:test:barth-par-specs $(FLAG)
 
 run: build
+	rm -f dump/*
 	stack exec -- barth-par scrape --output output/ --root-url '$(URL)'
 
 bench: build
