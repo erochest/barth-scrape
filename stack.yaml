@@ -5,4 +5,4 @@ packages:
 extra-deps:
 - cassava-conduit-0.2.0
 - groom-0.1.2
-resolver: lts-3.6
+resolver: lts-5.4
