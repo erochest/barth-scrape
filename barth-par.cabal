@@ -24,6 +24,7 @@ library
                      , BarthPar.Scrape
                      , BarthPar.Scrape.Network
                      , BarthPar.Scrape.Output
+                     , BarthPar.Scrape.Read
                      , BarthPar.Scrape.Types
                      , BarthPar.Scrape.Utils
                      , BarthPar.Scrape.XML

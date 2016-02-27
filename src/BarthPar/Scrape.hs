@@ -11,10 +11,12 @@ import           Control.Monad
 import           Data.Monoid
 import qualified Data.Text               as T
 import           Network.URI
+import           Prelude                 hiding (div)
 import           Text.XML.Cursor
 
 import           BarthPar.Scrape.Network
 import           BarthPar.Scrape.Output
+import           BarthPar.Scrape.Read
 import           BarthPar.Scrape.Types
 import           BarthPar.Scrape.Utils
 import           BarthPar.Scrape.XML
@@ -45,9 +47,9 @@ scrapeTOCPage :: URI
               -- ^ A predicate to find which links to move to next.
               -> Script [(T.Text, URI)]
                  -- ^ A list of A tag contents and @hrefs.
-scrapeTOCPage uri title p = do
+scrapeTOCPage uri title f = do
     doc <- dl (Just title) uri
-    mapMaybe (sequenceA . fmap (appendUri uri)) . filter (p . fst)
+    mapMaybe (sequenceA . fmap (appendUri uri)) . filter (f . fst)
                  <$> dumpPrint ("scrapeTOCPage \"" ++ T.unpack title ++ "\"")
                          (fromDocument doc $// tocEntries >=> tocPair title)
 
@@ -60,11 +62,7 @@ scrapePage :: VolumeTitle -> T.Text -> URI -> Script Page
 scrapePage volName pageName uri = do
     doc <- dl (Just $ volName <> " | " <> pageName) uri
     writeDoc "output/doc.html" doc
-    let nds = fromDocument doc
-              $// laxElement "div"
-              >=> attributeIs "id" "tinyurl"
-              >=> followingSibling
-              >=> laxElement "div"
+    let nds = fromDocument doc $// tinyurl >=> followingSibling >=> div
     void . writeNodes "output/page.html" $ map node nds
     makePage volName nds
     undefined
