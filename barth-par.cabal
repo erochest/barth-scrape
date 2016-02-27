@@ -22,6 +22,11 @@ library
                      , BarthPar.Lens
                      , BarthPar.Parallel
                      , BarthPar.Scrape
+                     , BarthPar.Scrape.Network
+                     , BarthPar.Scrape.Output
+                     , BarthPar.Scrape.Types
+                     , BarthPar.Scrape.Utils
+                     , BarthPar.Scrape.XML
                      , BarthPar.Types
                      , BarthPar.Utils
                      , BarthPar.XML
