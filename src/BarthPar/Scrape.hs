@@ -43,6 +43,7 @@ import           Text.XML.Lens          hiding (attributeIs, (??))
 -- import           Control.Concurrent.Async
 import           BarthPar.XML
 import           Data.Bitraversable
+import qualified Data.HashMap.Strict    as M
 import           Text.Numeral.Roman
 
 import           Debug.Trace
@@ -52,6 +53,13 @@ type VolumeTitle   = T.Text
 type SectionTitle  = T.Text
 type SectionHeader = (Int, SectionTitle)
 type Content       = T.Text
+type MetaMap       = M.HashMap T.Text T.Text
+
+tshow :: Show a => a -> T.Text
+tshow = T.pack . show
+
+class Metadata a where
+    asMetadata :: a -> M.HashMap T.Text T.Text
 
 data VolumeID
     = Volume !Int !Int
@@ -62,6 +70,12 @@ instance Buildable VolumeID where
     build (Volume v s) = mconcat ["Volume ", toRoman v, ",", build s]
     build (Appendix a) = "Appendix " <> toRoman a
 
+instance Metadata VolumeID where
+    asMetadata (Volume v s) = M.fromList [ ("volume",  tshow v)
+                                         , ("section", tshow s)
+                                         ]
+    asMetadata (Appendix a) = M.singleton "appendix" $ tshow a
+
 data Section
     = Section
     { sectionHead     :: !(Maybe SectionHeader)
@@ -71,15 +85,20 @@ data Section
 
 instance Buildable Section where
     build Section{..} =
-        mconcat [ foldMap buildHead sectionHead
-                , "---\n\n"
-                , foldMap buildElement sectionContent
+        mconcat [ foldMap buildElement sectionContent
                 , "\n\n---\n\n"
                 , foldMap buildElement sectionExcursus
                 ]
         where
-          buildHead (n, t) = mconcat [build n, ". ", build t, "\n"]
-          buildElement e   = foldMap build $ e ^.. text
+          buildElement = foldMap build . toListOf text
+
+instance Metadata Section where
+    asMetadata = foldMap ( M.fromList
+                         . zip ["number", "title"]
+                         . toListOf both
+                         . first tshow
+                         )
+                 . sectionHead
 
 data Page
     = Page
@@ -90,10 +109,21 @@ data Page
     } deriving (Show, Eq)
 
 instance Buildable Page where
-    build Page{..} = undefined
+    build = foldMap build . toListOf text . pageAbstract
 
--- TODO: add type for the output file contents and associated metadata
--- TODO: write the metadata to a json file alongside the content file
+instance Metadata Page where
+    asMetadata Page{..} =
+        M.insert "title" pageVolumeTitle $ asMetadata pageVolumeId
+
+data Output
+    = Output
+    { outputMetadata :: !MetaMap
+    , outputContent  :: !Builder
+    } deriving (Show, Eq)
+
+
+-- TODO: write the metadata to a json file alongside the content file,
+-- or a yaml block
 
 -- TODO: The tag sets of these should be bundled into one, easy-to-use
 -- function in `c18sgml`. Also need to get a real list from the HTML
