@@ -23,7 +23,8 @@ data Actions
       , jsonChunkSize  :: !Int
       }
     | Scrape
-      { scrapeUrl       :: !String
+      { scrapeClean     :: !Bool
+      , scrapeUrl       :: !String
       , scrapeOutputDir :: !FilePath
       }
     deriving (Show)

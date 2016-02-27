@@ -23,7 +23,10 @@ csvToJsonOpts =
 scrapeOpts :: Parser Actions
 scrapeOpts =
     Scrape
-    <$> strOption (  short 'u' <> long "root-url" <> metavar "URL"
+    <$> switch    (  short 'c' <> long "clean"
+                  <> help "Remove all files from the output directory before\
+                          \ processing.")
+    <*> strOption (  short 'u' <> long "root-url" <> metavar "URL"
                   <> help "The URL for the root.")
     <*> strOption (  short 'o' <> long "output" <> metavar "DIRNAME"
                   <> help "The directory to put the scraped documents into.")
