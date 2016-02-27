@@ -89,6 +89,10 @@ build:
 watch:
 	ghcid "--command=stack ghci --main-is barth-par:exe:barth-par"
 
+reload:
+	stack build --pedantic --file-watch \
+		--exec "barth-par scrape --root-url $(URL) --output ./output --clean"
+
 restart: distclean build
 
 rebuild: clean build
