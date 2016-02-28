@@ -4,6 +4,7 @@
 module BarthPar.Scrape.Read where
 
 
+import           Control.Applicative
 import           Control.Error
 import           Data.Bitraversable
 import           Data.Char
@@ -35,14 +36,29 @@ parseVolumeID vtitle
 
 makePage :: VolumeTitle -> [Cursor] -> Script Page
 makePage vtitle cs =
-    Page <$> parseVolumeID vtitle
-             <*> forceS "Unable to find VolumeTitle"
-                     (concatMap ($// spanHead >=> child >=> content) cs)
-             <*> forceS "Unable to find abstract"
-                     (concatMap (toListOf _Element . node) abstract')
-             <*> mapM (fmap cleanSection . readSection)
-                     (concatMap ($| followingSibling &/ div) abstract')
+    (Page <$> vId
+    <*> forceS "Unable to find VolumeTitle"
+            (concatMap ($// spanHead >=> child >=> content) cs)
+    <*> forceS "Unable to find abstract"
+            (concatMap (toListOf _Element . node) abstract')
+    <*> mapM (fmap cleanSection . readSection)
+            (concatMap ($| followingSibling &/ div) abstract'))
+    <|>
+    (Page <$> vId
+    <*> forceS "Unable to find VolumeTitle"
+            (concatMap ($// spanHead >=> child >=> content) cs)
+    <*> forceS "Unable to find excursus/abstract"
+            (concatMap ($// spanHead
+                       >=> followingSibling
+                       >=> excursus
+                       >=> toListOf _Element
+                       . node
+                       )
+             cs)
+    <*> mapM (fmap cleanSection . readSection)
+            (concatMap ($| spanHead >=> parent >=> followingSibling &/ div) cs))
     where
+      vId = parseVolumeID vtitle
       abstract' = concatMap ($| abstract) cs
 
 readSectionHead :: Cursor -> Script SectionHeader

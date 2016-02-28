@@ -63,7 +63,7 @@ instance Buildable Section where
 
 instance Metadata Section where
     asMetadata = foldMap ( M.fromList
-                         . zip ["number", "title"]
+                         . zip ["section_number", "section_title"]
                          . toListOf both
                          . first tshow
                          )
@@ -86,6 +86,7 @@ instance Metadata Page where
 
 data Output
     = Output
-    { outputMetadata :: !MetaMap
+    { outputFilePath :: !FilePath
+    , outputMetadata :: !MetaMap
     , outputContent  :: !Builder
     } deriving (Show, Eq)

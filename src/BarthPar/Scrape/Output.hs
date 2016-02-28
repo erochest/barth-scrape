@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 
@@ -7,7 +8,10 @@ module BarthPar.Scrape.Output where
 
 import           Control.Error
 import           Control.Monad
+import qualified Data.ByteString        as B
+import qualified Data.HashMap.Strict    as M
 import qualified Data.List              as L
+import           Data.Monoid
 import qualified Data.Text              as T
 import           Data.Text.Buildable
 import           Data.Text.Format       hiding (build)
@@ -15,6 +19,8 @@ import qualified Data.Text.IO           as TIO
 import qualified Data.Text.Lazy         as TL
 import           Data.Text.Lazy.Builder
 import qualified Data.Text.Lazy.IO      as TLIO
+import           Data.Yaml.Aeson
+import           Debug.Trace
 import           System.Directory
 import           System.FilePath
 import           System.IO
@@ -23,6 +29,7 @@ import           Text.XML
 import qualified Text.XML               as XML
 
 import           BarthPar.Scrape.Types
+import           BarthPar.Scrape.Utils
 
 
 findFileName :: Format -> Int -> Script FilePath
@@ -83,25 +90,30 @@ dumpEl source e = do
     void . dumpPage source $ XML.Document (XML.Prologue [] Nothing []) e []
     return e
 
+writeOutput :: Output -> Script ()
+writeOutput Output{..} = traceM ("WRITE: " ++ outputFilePath)
+                         >> scriptIO
+                         . withFile outputFilePath WriteMode $ \h ->
+                         B.hPut h (encode outputMetadata)
+                         >> hPutStrLn h "\n---\n\n"
+                         >> TLIO.hPutStr h (toLazyText outputContent)
+
 writePage :: FilePath -> Page -> Script ()
 writePage dirname page@Page{..} = do
-  -- TODO: abstract
-  forM_ (zip [1..] pageContent) $ \(n, s@Section{..}) ->
+  let pageMeta = asMetadata page
+  writeOutput $ Output
+                  (dirname </> makeFileName pageVolumeId 'a' 0)
+                  pageMeta
+                  (build page)
+  forM_ (zip [1..] pageContent) $ \(n, s@Section{sectionHead}) ->
       let filename = dirname
-                     </> makeFileName pageVolumeId
-                             (maybe 0 fst sectionHead) n
-      in  scriptIO
-              . TLIO.writeFile filename
-              . toLazyText
-              $ mconcat [ "# "
-                        , build pageVolumeId
-                        , " -- "
-                        , build pageVolumeTitle
-                        , "\n"
-                        , build s
-                        ]
+                     </> makeFileName pageVolumeId (maybe 0 fst sectionHead) n
+          metadata = pageMeta
+                     <> asMetadata s
+                     <> M.singleton "paragraph" (tshow n)
+      in  writeOutput . Output filename metadata $ build s
     where
-      makeFileName :: VolumeID -> Int -> Int -> FilePath
+      makeFileName :: Buildable s => VolumeID -> s -> Int -> FilePath
       makeFileName (Volume a b) section n =
           T.unpack
                . TL.toStrict
