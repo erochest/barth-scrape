@@ -22,47 +22,44 @@ import           BarthPar.Scrape.Utils
 import           BarthPar.Scrape.XML
 
 
--- TODO: write the metadata to a json file alongside the content file,
--- or a yaml block
-
-
-scrape :: Bool -> FilePath -> String -> Script ()
-scrape clean outputDir rootUrl = do
+scrape :: Bool -> FilePath -> Either FilePath String -> Script ()
+scrape clean outputDir inputRoot = do
   when clean $
        cleanOutputs outputDir
-  case parseURI rootUrl of
-    Just uri -> scrapeTOC uri >>= mapM_ (writePage outputDir)
-    Nothing  -> return ()
+  input <- case fmap parseURI inputRoot of
+             Right (Just uri) -> return $ Right uri
+             Left filePath    -> return $ Left filePath
+             Right Nothing    -> throwE "Invalid root URL."
+  scrapeTOC input >>= mapM_ (writePage outputDir)
 
-scrapeTOC :: URI -> Script [Page]
-scrapeTOC uri =
+scrapeTOC :: InputSource -> Script [Page]
+scrapeTOC input =
     fmap concat . smapConcurrently (uncurry scrapeVolumePage)
-        =<< scrapeTOCPage uri "Table of Contents" (T.isPrefixOf "CD ")
+        =<< scrapeTOCPage input "Table of Contents" (T.isPrefixOf "CD ")
 
-scrapeTOCPage :: URI
+scrapeTOCPage :: InputSource
               -- ^ The ToC's URI to download
               -> T.Text
               -- ^ The content of A tags to look for.
               -> (T.Text -> Bool)
               -- ^ A predicate to find which links to move to next.
-              -> Script [(T.Text, URI)]
+              -> Script [(T.Text, InputSource)]
                  -- ^ A list of A tag contents and @hrefs.
-scrapeTOCPage uri title f = do
-    doc <- dl (Just title) uri
-    mapMaybe (sequenceA . fmap (appendUri uri)) . filter (f . fst)
+scrapeTOCPage input title f = do
+    doc <- dl (Just title) input
+    mapMaybe (sequenceA . fmap (appendInput input)) . filter (f . fst)
                  <$> dumpPrint ("scrapeTOCPage \"" ++ T.unpack title ++ "\"")
                          (fromDocument doc $// tocEntries >=> tocPair title)
 
-scrapeVolumePage :: T.Text -> URI -> Script [Page]
-scrapeVolumePage volName uri =
+scrapeVolumePage :: T.Text -> InputSource -> Script [Page]
+scrapeVolumePage volName input =
     smapConcurrently (uncurry (scrapePage volName))
-        =<< scrapeTOCPage uri "View Text" (T.isPrefixOf "§ ")
+        =<< scrapeTOCPage input "View Text" (T.isPrefixOf "§ ")
 
-scrapePage :: VolumeTitle -> T.Text -> URI -> Script Page
-scrapePage volName pageName uri = do
-    doc <- dl (Just $ volName <> " | " <> pageName) uri
+scrapePage :: VolumeTitle -> T.Text -> InputSource -> Script Page
+scrapePage volName pageName input = do
+    doc <- dl (Just $ volName <> " | " <> pageName) input
     writeDoc "output/doc.html" doc
     let nds = fromDocument doc $// tinyurl >=> followingSibling >=> div
     void . writeNodes "output/page.html" $ map node nds
     makePage volName nds
-    undefined

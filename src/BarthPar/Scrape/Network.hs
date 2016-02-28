@@ -12,32 +12,52 @@ import           Control.Lens
 import qualified Data.ByteString.Lazy   as B
 import qualified Data.Text              as T
 import           Data.Text.Encoding
+import qualified Data.Text.IO           as TIO
 import           Data.Traversable
 import           Network.URI
 import           Network.Wreq
+import           System.FilePath
 import           Text.HTML.TagSoup
 import qualified Text.XML               as XML
 
 import           BarthPar.Scrape.Output
+import           BarthPar.Scrape.Types
 import           BarthPar.XML
 
 
-dl :: Maybe T.Text -> URI -> Script XML.Document
-dl title rootUrl = do
-    scriptIO
-       . putStrLn
-       . ("DOWNLOAD: " ++)
-       $ maybe ("<" ++ uri ++ ">") ( (++ ")")
-                                   . (++ uri)
-                                   . ("[" ++)
-                                   . (++ "](")
-                                   . T.unpack
-                                   ) title
-    dumpPage uri . unnest . parseTags
-        =<< dumpText uri . decodeUtf8 . B.toStrict . view responseBody
-        =<< scriptIO (get uri)
+dl :: Maybe T.Text -> InputSource -> Script XML.Document
+dl title (Right rootUrl) = do
+  scriptIO . putStrLn
+               . ("DOWNLOAD: " ++)
+               $ maybe ("<" ++ uri ++ ">") ( (++ ")")
+                                           . (++ uri)
+                                           . ("[" ++)
+                                           . (++ "](")
+                                           . T.unpack
+                                           ) title
+  dumpPage uri . unnest . parseTags
+    =<< dumpText uri . decodeUtf8 . B.toStrict . view responseBody
+    =<< scriptIO (get uri)
     where
       uri = show rootUrl
+
+dl title (Left filePath) = do
+  scriptIO . putStrLn
+               . ("READ: " ++)
+               $ maybe ("<" ++ filePath ++ ">") ( (++ ")")
+                                                . (++ filePath)
+                                                . ("[" ++)
+                                                . (++ "](")
+                                                . T.unpack
+                                                ) title
+  dumpPage filePath . unnest . parseTags
+           =<< dumpText filePath
+           =<< scriptIO (TIO.readFile filePath)
+
+appendInput :: InputSource -> T.Text -> Maybe InputSource
+appendInput (Right uri)     app = Right <$> appendUri uri app
+appendInput (Left filePath) app =
+    Just . Left . replaceFileName filePath . unEscapeString $ T.unpack app
 
 appendUri :: URI -> T.Text -> Maybe URI
 appendUri base = fmap (`nonStrictRelativeTo` base)

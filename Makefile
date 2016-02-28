@@ -17,7 +17,8 @@ INPUT=barth.1000
 # CHUNK_SIZE=1048576
 CHUNK_SIZE=33554432
 
-URL=http://solomon.dkbl.alexanderstreet.com/cgi-bin/asp/philo/dkbl/volumes_toc.pl?&church=ON
+# URL=http://solomon.dkbl.alexanderstreet.com/cgi-bin/asp/philo/dkbl/volumes_toc.pl?&church=ON
+URL=$(HOME)/p/barth/solomon.dkbl.alexanderstreet.com/cgi-bin/asp/philo/dkbl/volumes_toc.pl?&church=ON.html
 
 all: init test docs package
 
@@ -31,7 +32,8 @@ test:
 
 run: build
 	rm -f dump/*
-	stack exec -- barth-par scrape --output output/ --root-url '$(URL)'
+	stack exec -- barth-par scrape --clean --output output/ \
+		--root-file "$(URL)"
 
 bench: build
 	for n in 0 1 2 4 8 16 32 64 128 256 512 1024 2048 4096; do echo $$n; \
@@ -91,7 +93,7 @@ watch:
 
 reload:
 	stack build --pedantic --file-watch \
-		--exec "barth-par scrape --root-url $(URL) --output ./output --clean"
+		--exec "barth-par scrape --root-file $(URL) --output ./output --clean"
 
 restart: distclean build
 

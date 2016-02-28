@@ -24,7 +24,7 @@ data Actions
       }
     | Scrape
       { scrapeClean     :: !Bool
-      , scrapeUrl       :: !String
+      , scrapeInput     :: !(Either FilePath String)
       , scrapeOutputDir :: !FilePath
       }
     deriving (Show)

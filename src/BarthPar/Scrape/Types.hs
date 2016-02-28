@@ -12,6 +12,7 @@ import           Data.Monoid
 import qualified Data.Text              as T
 import           Data.Text.Buildable
 import           Data.Text.Lazy.Builder
+import           Network.URI
 import           Text.Numeral.Roman
 import qualified Text.XML               as XML
 import           Text.XML.Lens
@@ -24,6 +25,7 @@ type SectionTitle  = T.Text
 type SectionHeader = (Int, SectionTitle)
 type Content       = T.Text
 type MetaMap       = M.HashMap T.Text T.Text
+type InputSource   = Either String URI
 
 class Metadata a where
     asMetadata :: a -> M.HashMap T.Text T.Text
