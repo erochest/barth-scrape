@@ -104,7 +104,7 @@ writePage dirname page@Page{..} = do
                   (dirname </> makeFileName pageVolumeId 'a' 0)
                   pageMeta
                   (build page)
-  forM_ (zip [1..] pageContent) $ \(n, s@Section{sectionHead}) ->
+  forM_ (zip [0..] pageContent) $ \(n, s@Section{sectionHead}) ->
       let filename = dirname
                      </> makeFileName pageVolumeId (maybe 0 fst sectionHead) n
           metadata = M.singleton "page" (Object pageMeta)
@@ -116,19 +116,19 @@ writePage dirname page@Page{..} = do
       makeFileName (Volume a b) section n =
           T.unpack
                . TL.toStrict
-               $ format "barth-{}-{}-{}-{}" ( left 2 '0' a
-                                            , left 2 '0' b
-                                            , left 2 '0' section
-                                            , left 2 '0' n
-                                            )
+               $ format "barth-{}-{}-{}-{}.md" ( left 2 '0' a
+                                               , left 2 '0' b
+                                               , left 2 '0' section
+                                               , left 2 '0' n
+                                               )
       makeFileName (Appendix a) section n =
           T.unpack
                . TL.toStrict
-               $ format "barth-{}-{}-{}-{}" ( "XX" :: T.Text
-                                            , left 2 '0' a
-                                            , left 2 '0' section
-                                            , left 2 '0' n
-                                            )
+               $ format "barth-{}-{}-{}-{}.md" ( "XX" :: T.Text
+                                               , left 2 '0' a
+                                               , left 2 '0' section
+                                               , left 2 '0' n
+                                               )
 
 wrapNodes :: [XML.Node] -> XML.Document
 wrapNodes nds =
