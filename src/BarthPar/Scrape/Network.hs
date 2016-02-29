@@ -5,22 +5,21 @@
 module BarthPar.Scrape.Network where
 
 
-import qualified C18.Balance            as C18
+import qualified C18.Balance           as C18
 import           C18.Types
 import           Control.Error
 import           Control.Lens
-import qualified Data.ByteString.Lazy   as B
-import qualified Data.Text              as T
+import qualified Data.ByteString.Lazy  as B
+import qualified Data.Text             as T
 import           Data.Text.Encoding
-import qualified Data.Text.IO           as TIO
+import qualified Data.Text.IO          as TIO
 import           Data.Traversable
 import           Network.URI
 import           Network.Wreq
 import           System.FilePath
 import           Text.HTML.TagSoup
-import qualified Text.XML               as XML
+import qualified Text.XML              as XML
 
-import           BarthPar.Scrape.Output
 import           BarthPar.Scrape.Types
 import           BarthPar.XML
 
@@ -35,9 +34,8 @@ dl title (Right rootUrl) = do
                                            . (++ "](")
                                            . T.unpack
                                            ) title
-  dumpPage uri . unnest . parseTags
-    =<< dumpText uri . decodeUtf8 . B.toStrict . view responseBody
-    =<< scriptIO (get uri)
+  unnest . parseTags . decodeUtf8 . B.toStrict . view responseBody
+                 <$> scriptIO (get uri)
     where
       uri = show rootUrl
 
@@ -50,9 +48,7 @@ dl title (Left filePath) = do
                                                 . (++ "](")
                                                 . T.unpack
                                                 ) title
-  dumpPage filePath . unnest . parseTags
-           =<< dumpText filePath
-           =<< scriptIO (TIO.readFile filePath)
+  unnest . parseTags <$> scriptIO (TIO.readFile filePath)
 
 appendInput :: InputSource -> T.Text -> Maybe InputSource
 appendInput (Right uri)     app = Right <$> appendUri uri app

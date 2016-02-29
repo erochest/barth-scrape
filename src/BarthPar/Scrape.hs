@@ -45,11 +45,12 @@ scrapeTOCPage :: InputSource
               -- ^ A predicate to find which links to move to next.
               -> Script [(T.Text, InputSource)]
                  -- ^ A list of A tag contents and @hrefs.
-scrapeTOCPage input title f = do
-    doc <- dl (Just title) input
-    mapMaybe (sequenceA . fmap (appendInput input)) . filter (f . fst)
-                 <$> dumpPrint ("scrapeTOCPage \"" ++ T.unpack title ++ "\"")
-                         (fromDocument doc $// tocEntries >=> tocPair title)
+scrapeTOCPage input title f =
+    mapMaybe (sequenceA . fmap (appendInput input))
+                 . filter (f . fst)
+                 . ($// tocEntries >=> tocPair title)
+                 . fromDocument
+                 <$> dl (Just title) input
 
 scrapeVolumePage :: T.Text -> InputSource -> Script [Page]
 scrapeVolumePage volName input =
