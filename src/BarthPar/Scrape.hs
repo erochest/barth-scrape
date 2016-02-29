@@ -60,7 +60,7 @@ scrapeVolumePage volName input =
 scrapePage :: VolumeTitle -> T.Text -> InputSource -> Script Page
 scrapePage volName pageName input = do
     doc <- dl (Just $ volName <> " | " <> pageName) input
-    writeDoc "output/doc.html" doc
+    -- writeDoc "output/doc.html" doc
     let nds = fromDocument doc $// tinyurl >=> followingSibling >=> div
-    void . writeNodes "output/page.html" $ map node nds
+    -- void . writeNodes "output/page.html" $ map node nds
     makePage volName nds
