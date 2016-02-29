@@ -29,7 +29,6 @@ import           Text.XML
 import qualified Text.XML               as XML
 
 import           BarthPar.Scrape.Types
-import           BarthPar.Scrape.Utils
 
 
 findFileName :: Format -> Int -> Script FilePath
@@ -108,9 +107,9 @@ writePage dirname page@Page{..} = do
   forM_ (zip [1..] pageContent) $ \(n, s@Section{sectionHead}) ->
       let filename = dirname
                      </> makeFileName pageVolumeId (maybe 0 fst sectionHead) n
-          metadata = pageMeta
+          metadata = M.singleton "page" (Object pageMeta)
                      <> asMetadata s
-                     <> M.singleton "paragraph" (tshow n)
+                     <> M.singleton "paragraph" (toJSON n)
       in  writeOutput . Output filename metadata $ build s
     where
       makeFileName :: Buildable s => VolumeID -> s -> Int -> FilePath

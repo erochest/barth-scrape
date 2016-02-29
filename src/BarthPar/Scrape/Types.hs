@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 
@@ -5,30 +6,28 @@
 module BarthPar.Scrape.Types where
 
 
-import           Control.Lens
-import           Data.Bifunctor
+import           Control.Lens           hiding ((.=))
 import qualified Data.HashMap.Strict    as M
 import           Data.Monoid
 import qualified Data.Text              as T
 import           Data.Text.Buildable
 import           Data.Text.Lazy.Builder
+import           Data.Yaml
 import           Network.URI
 import           Text.Numeral.Roman
 import qualified Text.XML               as XML
-import           Text.XML.Lens
-
-import           BarthPar.Scrape.Utils
+import           Text.XML.Lens          hiding ((.=))
 
 
 type VolumeTitle   = T.Text
 type SectionTitle  = T.Text
 type SectionHeader = (Int, SectionTitle)
 type Content       = T.Text
-type MetaMap       = M.HashMap T.Text T.Text
+type MetaMap       = Object
 type InputSource   = Either String URI
 
 class Metadata a where
-    asMetadata :: a -> M.HashMap T.Text T.Text
+    asMetadata :: a -> MetaMap
 
 data VolumeID
     = Volume !Int !Int
@@ -40,10 +39,11 @@ instance Buildable VolumeID where
     build (Appendix a) = "Appendix " <> toRoman a
 
 instance Metadata VolumeID where
-    asMetadata (Volume v s) = M.fromList [ ("volume",  tshow v)
-                                         , ("section", tshow s)
-                                         ]
-    asMetadata (Appendix a) = M.singleton "appendix" $ tshow a
+    asMetadata (Volume v s) = [ ("volume" , toJSON v)
+                              , ("section", toJSON s)
+                              ]
+    asMetadata (Appendix a) = [ ("appendix", toJSON a)
+                              ]
 
 data Section
     = Section
@@ -58,14 +58,12 @@ instance Buildable Section where
                 , "\n\n---\n\n"
                 , foldMap buildElement sectionExcursus
                 ]
-        where
-          buildElement = foldMap build . toListOf text
 
 instance Metadata Section where
     asMetadata = foldMap ( M.fromList
                          . zip ["section_number", "section_title"]
                          . toListOf both
-                         . first tshow
+                         . (toJSON `bimap` toJSON)
                          )
                  . sectionHead
 
@@ -78,11 +76,11 @@ data Page
     } deriving (Show, Eq)
 
 instance Buildable Page where
-    build = foldMap build . toListOf text . pageAbstract
+    build = buildElement . pageAbstract
 
 instance Metadata Page where
     asMetadata Page{..} =
-        M.insert "title" pageVolumeTitle $ asMetadata pageVolumeId
+        M.insert "title" (toJSON pageVolumeTitle) $ asMetadata pageVolumeId
 
 data Output
     = Output
@@ -90,3 +88,6 @@ data Output
     , outputMetadata :: !MetaMap
     , outputContent  :: !Builder
     } deriving (Show, Eq)
+
+buildElement :: Element -> Builder
+buildElement = foldMap build . toListOf (entire . text)
