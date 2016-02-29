@@ -42,7 +42,7 @@ makePage vtitle cs =
     <*> forceS "Unable to find abstract"
             (concatMap (toListOf _Element . node) abstract')
     <*> mapM (fmap cleanSection . readSection)
-            (concatMap ($| followingSibling &/ div) abstract'))
+            (concatMap ($| followingSibling) abstract'))
     <|>
     (Page <$> vId
     <*> forceS "Unable to find VolumeTitle"
