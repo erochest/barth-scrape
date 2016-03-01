@@ -104,7 +104,7 @@ writePage dirname page@Page{..} = do
                   (dirname </> makeFileName pageVolumeId 'a' 0)
                   pageMeta
                   (build page)
-  forM_ (zip [0..] pageContent) $ \(n, s@Section{sectionHead}) ->
+  forM_ (zip [1..] pageContent) $ \(n, s@Section{sectionHead}) ->
       let filename = dirname
                      </> makeFileName pageVolumeId (maybe 0 fst sectionHead) n
           metadata = M.singleton "page" (Object pageMeta)

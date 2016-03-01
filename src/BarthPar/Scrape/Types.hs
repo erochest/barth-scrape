@@ -67,6 +67,7 @@ instance Metadata Section where
                          )
                  . sectionHead
 
+-- TODO: Add input page
 data Page
     = Page
     { pageVolumeId    :: !VolumeID
