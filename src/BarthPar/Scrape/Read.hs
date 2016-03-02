@@ -105,11 +105,19 @@ readSection c =
                 >=> toListOf _Element . node
                 )
 
--- TODO: Remove "[note]"
+-- TODO: Think I can use Control.Lens.Plated here
+-- TODO: Replace Cursor navigation with lenses
+-- TODO: PureScript alias and utility functions
 cleanSection :: Section -> Section
 cleanSection =
-    over sectionContent (>>= filterEl notCenter)
-             . over sectionExcursus (>>= filterEl notCenter)
+    over sectionContent (>>= filterEl f)
+             . over sectionExcursus (>>= filterEl f)
     where
-      notCenter :: Element -> Bool
-      notCenter = not . (== "center") . elementName
+      center :: Element -> Bool
+      center = (== "center") . view name
+
+      noteLink :: Element -> Bool
+      noteLink e = e ^. name == "a" && e ^. text == "[note]"
+
+      f :: Element -> Bool
+      f e = not $ center e || noteLink e
