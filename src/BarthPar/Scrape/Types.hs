@@ -68,7 +68,7 @@ instance Buildable Section where
 
 instance Metadata Section where
     asMetadata = foldMap ( M.fromList
-                         . zip ["section_number", "section_title"]
+                         . zip ["number", "title"]
                          . toListOf both
                          . (toJSON `bimap` toJSON)
                          )

@@ -11,7 +11,6 @@ import           Control.Monad
 import qualified Data.ByteString        as B
 import qualified Data.HashMap.Strict    as M
 import qualified Data.List              as L
-import           Data.Monoid
 import qualified Data.Text              as T
 import           Data.Text.Buildable
 import           Data.Text.Format       hiding (build)
@@ -99,7 +98,7 @@ writeOutput Output{..} = traceM ("WRITE: " ++ outputFilePath)
 
 writePage :: FilePath -> Page -> Script ()
 writePage dirname page@Page{..} = do
-  let pageMeta = asMetadata page
+  let pageMeta = M.singleton "page" . Object $ asMetadata page
   writeOutput $ Output
                   (dirname </> makeFileName pageVolumeId (0 :: Int) 0)
                   pageMeta
@@ -107,9 +106,9 @@ writePage dirname page@Page{..} = do
   forM_ pageContent $ \(n, s@Section{sectionHead}) ->
       let filename = dirname
                      </> makeFileName pageVolumeId (maybe 0 fst sectionHead) n
-          metadata = M.singleton "page" (Object pageMeta)
-                     <> asMetadata s
-                     <> M.singleton "paragraph" (toJSON n)
+          metadata = M.insert "paragraph" (toJSON n)
+                     . M.insert "section" (Object $ asMetadata s)
+                     $ pageMeta
       in  writeOutput . Output filename metadata $ build s
     where
       makeFileName :: Buildable s => VolumeID -> s -> Int -> FilePath

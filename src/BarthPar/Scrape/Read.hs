@@ -25,7 +25,6 @@ parseVolumeID :: VolumeTitle -> T.Text -> Script VolumeID
 parseVolumeID vtitle pageName
     -- CD Volume I,1 (§§ 1-12)
     | "CD Volume " `T.isPrefixOf` vtitle =
-        scriptIO . watchM ("parseVolumeID '" ++ T.unpack vtitle ++ "'") =<<
         volume <$> ( bisequenceA
                    . (fromRomanS `bimap` (fmap fst . decimalS . T.drop 1))
                    . T.break (== ',')
@@ -41,6 +40,7 @@ parseVolumeID vtitle pageName
     where
       volume (v, s) = Volume v s
 
+-- § 1 The Task of Dogmatics.
 parsePageName :: T.Text -> Script Int
 parsePageName page = fst <$> decimalS (T.drop 2 page)
 
@@ -85,15 +85,13 @@ makePage vtitle pageName cs =
       abstract' = concatMap ($| abstract) cs
 
 readSectionHead :: Cursor -> Script SectionHeader
-readSectionHead c = scriptIO . watchM ("readSectionHead '" ++ T.unpack (mconcat $ c $// content) ++ "'") =<<
-    (fmap (swap . fmap fst)
+readSectionHead c = fmap (swap . fmap fst)
                     . sequenceA
                     . (T.drop 2 `bimap` decimalS)
                     . swap
                     . T.break (=='.')
                     . T.concat
                     $ c $// content
-                      )
 
 readSection :: Cursor -> Script Section
 readSection c =
