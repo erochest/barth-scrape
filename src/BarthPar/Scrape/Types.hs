@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 
 module BarthPar.Scrape.Types where
@@ -19,6 +20,10 @@ import qualified Text.XML               as XML
 import           Text.XML.Lens          hiding ((.=))
 
 
+buildElement :: Element -> Builder
+buildElement = foldMap build . toListOf (entire . text)
+
+
 type VolumeTitle   = T.Text
 type SectionTitle  = T.Text
 type SectionHeader = (Int, SectionTitle)
@@ -30,9 +35,15 @@ class Metadata a where
     asMetadata :: a -> MetaMap
 
 data VolumeID
-    = Volume !Int !Int !Int
-    | Appendix !Int
+    = Volume
+      { _volumeNumber  :: !Int
+      , _volumePart    :: !Int
+      , _volumeSection :: !Int
+      }
+    | Appendix { _appendixNumber :: !Int }
     deriving (Show, Eq)
+$(makePrisms ''VolumeID)
+$(makeLenses ''VolumeID)
 
 instance Buildable VolumeID where
     build (Volume v s p) = mconcat [ "Volume "
@@ -54,16 +65,17 @@ instance Metadata VolumeID where
 
 data Section
     = Section
-    { sectionHead     :: !(Maybe SectionHeader)
-    , sectionContent  :: ![XML.Element]
-    , sectionExcursus :: !(Maybe XML.Element)
+    { _sectionHead     :: !(Maybe SectionHeader)
+    , _sectionContent  :: ![XML.Element]
+    , _sectionExcursus :: !(Maybe XML.Element)
     } deriving (Show, Eq)
+$(makeLenses ''Section)
 
 instance Buildable Section where
     build Section{..} =
-        mconcat [ foldMap buildElement sectionContent
+        mconcat [ foldMap buildElement _sectionContent
                 , "\n\n---\n\n"
-                , foldMap buildElement sectionExcursus
+                , foldMap buildElement _sectionExcursus
                 ]
 
 instance Metadata Section where
@@ -72,30 +84,29 @@ instance Metadata Section where
                          . toListOf both
                          . (toJSON `bimap` toJSON)
                          )
-                 . sectionHead
+                 . _sectionHead
 
 -- TODO: Add input page
 data Page
     = Page
-    { pageVolumeId    :: !VolumeID
-    , pageVolumeTitle :: !VolumeTitle
-    , pageAbstract    :: !XML.Element
-    , pageContent     :: ![(Int, Section)]
+    { _pageVolumeId    :: !VolumeID
+    , _pageVolumeTitle :: !VolumeTitle
+    , _pageAbstract    :: !XML.Element
+    , _pageContent     :: ![(Int, Section)]
     } deriving (Show, Eq)
+$(makeLenses ''Page)
 
 instance Buildable Page where
-    build = buildElement . pageAbstract
+    build = buildElement . _pageAbstract
 
 instance Metadata Page where
     asMetadata Page{..} =
-        M.insert "title" (toJSON pageVolumeTitle) $ asMetadata pageVolumeId
+        M.insert "title" (toJSON _pageVolumeTitle) $ asMetadata _pageVolumeId
 
 data Output
     = Output
-    { outputFilePath :: !FilePath
-    , outputMetadata :: !MetaMap
-    , outputContent  :: !Builder
+    { _outputFilePath :: !FilePath
+    , _outputMetadata :: !MetaMap
+    , _outputContent  :: !Builder
     } deriving (Show, Eq)
-
-buildElement :: Element -> Builder
-buildElement = foldMap build . toListOf (entire . text)
+$(makeLenses ''Output)

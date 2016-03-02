@@ -6,6 +6,7 @@ module BarthPar.Scrape.Read where
 
 import           Control.Applicative
 import           Control.Error
+import           Control.Lens
 import           Data.Bitraversable
 import           Data.Char
 import           Data.Foldable
@@ -52,9 +53,8 @@ readChildSections = fmap (zip [1..] . L.reverse . snd)
            -> Script (Maybe SectionHeader, [Section])
       step (sh, sections) c = do
         s <- cleanSection <$> readSection c
-        let s' = s { sectionHead = sectionHead s <|> sh
-                   }
-        return ( sectionHead s'
+        let s' = s & over sectionHead (<|> sh)
+        return ( _sectionHead s'
                , s' : sections
                )
 
