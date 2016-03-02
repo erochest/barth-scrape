@@ -89,7 +89,7 @@ build:
 	stack build $(FLAGS)
 
 watch:
-	ghcid "--command=stack ghci --main-is barth-par:exe:barth-par"
+	ghcid "--command=stack ghci barth-par"
 
 reload:
 	stack build --pedantic --file-watch \
