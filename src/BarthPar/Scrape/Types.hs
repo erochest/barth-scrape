@@ -30,20 +30,27 @@ class Metadata a where
     asMetadata :: a -> MetaMap
 
 data VolumeID
-    = Volume !Int !Int
+    = Volume !Int !Int !Int
     | Appendix !Int
     deriving (Show, Eq)
 
 instance Buildable VolumeID where
-    build (Volume v s) = mconcat ["Volume ", toRoman v, ",", build s]
-    build (Appendix a) = "Appendix " <> toRoman a
+    build (Volume v s p) = mconcat [ "Volume "
+                                   , toRoman v
+                                   , ","
+                                   , build s
+                                   , " §"
+                                   , build p
+                                   ]
+    build (Appendix a)   = "Appendix " <> toRoman a
 
 instance Metadata VolumeID where
-    asMetadata (Volume v s) = [ ("volume" , toJSON v)
-                              , ("section", toJSON s)
-                              ]
-    asMetadata (Appendix a) = [ ("appendix", toJSON a)
-                              ]
+    asMetadata (Volume v s p) = [ ("volume" , toJSON v)
+                                , ("section", toJSON s)
+                                , ("page"   , toJSON p)
+                                ]
+    asMetadata (Appendix a)   = [ ("appendix", toJSON a)
+                                ]
 
 data Section
     = Section
@@ -73,7 +80,7 @@ data Page
     { pageVolumeId    :: !VolumeID
     , pageVolumeTitle :: !VolumeTitle
     , pageAbstract    :: !XML.Element
-    , pageContent     :: ![Section]
+    , pageContent     :: ![(Int, Section)]
     } deriving (Show, Eq)
 
 instance Buildable Page where

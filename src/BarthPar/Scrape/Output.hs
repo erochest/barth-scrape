@@ -101,10 +101,10 @@ writePage :: FilePath -> Page -> Script ()
 writePage dirname page@Page{..} = do
   let pageMeta = asMetadata page
   writeOutput $ Output
-                  (dirname </> makeFileName pageVolumeId 'a' 0)
+                  (dirname </> makeFileName pageVolumeId (0 :: Int) 0)
                   pageMeta
                   (build page)
-  forM_ (zip [1..] pageContent) $ \(n, s@Section{sectionHead}) ->
+  forM_ pageContent $ \(n, s@Section{sectionHead}) ->
       let filename = dirname
                      </> makeFileName pageVolumeId (maybe 0 fst sectionHead) n
           metadata = M.singleton "page" (Object pageMeta)
@@ -113,22 +113,26 @@ writePage dirname page@Page{..} = do
       in  writeOutput . Output filename metadata $ build s
     where
       makeFileName :: Buildable s => VolumeID -> s -> Int -> FilePath
-      makeFileName (Volume a b) section n =
+      makeFileName (Volume a b p) section n =
           T.unpack
                . TL.toStrict
-               $ format "barth-{}-{}-{}-{}.md" ( left 2 '0' a
-                                               , left 2 '0' b
-                                               , left 2 '0' section
-                                               , left 2 '0' n
-                                               )
+               $ format "barth-{}-{}-{}-{}-{}.md"
+                     ( left 2 '0' a
+                     , left 2 '0' b
+                     , left 2 '0' p
+                     , left 2 '0' section
+                     , left 3 '0' n
+                     )
       makeFileName (Appendix a) section n =
           T.unpack
                . TL.toStrict
-               $ format "barth-{}-{}-{}-{}.md" ( "XX" :: T.Text
-                                               , left 2 '0' a
-                                               , left 2 '0' section
-                                               , left 2 '0' n
-                                               )
+               $ format "barth-{}-{}-{}-{}-{}.md"
+                     ( "XX" :: T.Text
+                     , left 2 '0' a
+                     , left 2 '0' (0 :: Int)
+                     , left 2 '0' section
+                     , left 3 '0' n
+                     )
 
 wrapNodes :: [XML.Node] -> XML.Document
 wrapNodes nds =
