@@ -7,6 +7,7 @@ module BarthPar.Scrape.Read where
 import           Control.Applicative
 import           Control.Error
 import           Control.Lens
+import           Control.Monad
 import           Data.Bitraversable
 import           Data.Char
 import           Data.Foldable
@@ -104,6 +105,11 @@ readSection c =
                 >=> toListOf _Element . node
                 )
 
--- TODO: page numbers
+-- TODO: Remove "[note]"
 cleanSection :: Section -> Section
-cleanSection = id
+cleanSection =
+    over sectionContent (>>= filterEl notCenter)
+             . over sectionExcursus (>>= filterEl notCenter)
+    where
+      notCenter :: Element -> Bool
+      notCenter = not . (== "center") . elementName
