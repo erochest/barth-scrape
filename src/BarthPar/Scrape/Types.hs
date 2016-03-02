@@ -7,6 +7,7 @@
 module BarthPar.Scrape.Types where
 
 
+import           Control.Error
 import           Control.Lens           hiding ((.=))
 import qualified Data.HashMap.Strict    as M
 import           Data.Monoid
@@ -30,6 +31,10 @@ type SectionHeader = (Int, SectionTitle)
 type Content       = T.Text
 type MetaMap       = Object
 type InputSource   = Either String URI
+type PureScript    = Either String
+
+io :: PureScript a -> Script a
+io = hoistEither
 
 class Metadata a where
     asMetadata :: a -> MetaMap

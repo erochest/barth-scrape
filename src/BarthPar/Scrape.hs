@@ -63,4 +63,4 @@ scrapePage volName pageName input = do
     -- writeDoc "output/doc.html" doc
     let nds = fromDocument doc $// tinyurl >=> followingSibling >=> div
     -- void . writeNodes "output/page.html" $ map node nds
-    makePage volName pageName nds
+    io $ makePage volName pageName nds

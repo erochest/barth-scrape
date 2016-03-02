@@ -13,6 +13,7 @@ import           Data.Char
 import           Data.Foldable
 import qualified Data.List             as L
 import qualified Data.Text             as T
+import           Data.Text.Read
 import           Data.Tuple
 import           Prelude               hiding (div)
 import           Text.XML.Cursor
@@ -23,12 +24,12 @@ import           BarthPar.Scrape.Utils
 import           BarthPar.Scrape.XML
 
 
-parseVolumeID :: VolumeTitle -> T.Text -> Script VolumeID
+parseVolumeID :: VolumeTitle -> T.Text -> PureScript VolumeID
 parseVolumeID vtitle pageName
     -- CD Volume I,1 (§§ 1-12)
     | "CD Volume " `T.isPrefixOf` vtitle =
         volume <$> ( bisequenceA
-                   . (fromRomanS `bimap` (fmap fst . decimalS . T.drop 1))
+                   . (fromRomanPS `bimap` (fmap fst . decimal . T.drop 1))
                    . T.break (== ',')
                    . T.takeWhile (not . isSpace)
                    $ T.drop 10 vtitle
@@ -37,21 +38,21 @@ parseVolumeID vtitle pageName
 
     -- I. General Index
     | otherwise =
-        fmap Appendix . fromRomanS $ T.takeWhile (not . (=='.')) vtitle
+        fmap Appendix . fromRomanPS $ T.takeWhile (not . (=='.')) vtitle
 
     where
       volume (v, s) = Volume v s
 
 -- § 1 The Task of Dogmatics.
-parsePageName :: T.Text -> Script Int
-parsePageName page = fst <$> decimalS (T.drop 2 page)
+parsePageName :: T.Text -> PureScript Int
+parsePageName = fmap fst . decimal . T.drop 2
 
-readChildSections :: [Cursor] -> Script [(Int, Section)]
+readChildSections :: [Cursor] -> PureScript [(Int, Section)]
 readChildSections = fmap (zip [1..] . L.reverse . snd)
                     . foldlM step (Nothing, [])
     where
       step :: (Maybe SectionHeader, [Section]) -> Cursor
-           -> Script (Maybe SectionHeader, [Section])
+           -> PureScript (Maybe SectionHeader, [Section])
       step (sh, sections) c = do
         s <- cleanSection <$> readSection c
         let s' = s & over sectionHead (<|> sh)
@@ -59,19 +60,19 @@ readChildSections = fmap (zip [1..] . L.reverse . snd)
                , s' : sections
                )
 
-makePage :: VolumeTitle -> T.Text -> [Cursor] -> Script Page
+makePage :: VolumeTitle -> T.Text -> [Cursor] -> PureScript Page
 makePage vtitle pageName cs =
     (Page <$> vId
-    <*> forceS "Unable to find VolumeTitle"
+    <*> forcePS "Unable to find VolumeTitle"
             (concatMap ($// spanHead >=> child >=> content) cs)
-    <*> forceS "Unable to find abstract"
+    <*> forcePS "Unable to find abstract"
             (concatMap (toListOf _Element . node) abstract')
     <*> readChildSections (concatMap ($| followingSibling) abstract'))
     <|>
     (Page <$> vId
-    <*> forceS "Unable to find VolumeTitle"
+    <*> forcePS "Unable to find VolumeTitle"
             (concatMap ($// spanHead >=> child >=> content) cs)
-    <*> forceS "Unable to find excursus/abstract"
+    <*> forcePS "Unable to find excursus/abstract"
             (concatMap ($// spanHead
                        >=> followingSibling
                        >=> excursus
@@ -85,16 +86,16 @@ makePage vtitle pageName cs =
       vId = parseVolumeID vtitle pageName
       abstract' = concatMap ($| abstract) cs
 
-readSectionHead :: Cursor -> Script SectionHeader
+readSectionHead :: Cursor -> PureScript SectionHeader
 readSectionHead c = fmap (swap . fmap fst)
                     . sequenceA
-                    . (T.drop 2 `bimap` decimalS)
+                    . (T.drop 2 `bimap` decimal)
                     . swap
                     . T.break (=='.')
                     . T.concat
                     $ c $// content
 
-readSection :: Cursor -> Script Section
+readSection :: Cursor -> PureScript Section
 readSection c =
     Section <$> (listToMaybe <$> mapM readSectionHead (c $/ spanHead))
             <*> pure (c $/ p >=> toListOf _Element . node)
@@ -107,7 +108,6 @@ readSection c =
 
 -- TODO: Think I can use Control.Lens.Plated here
 -- TODO: Replace Cursor navigation with lenses
--- TODO: PureScript alias and utility functions
 cleanSection :: Section -> Section
 cleanSection =
     over sectionContent (>>= filterEl f)

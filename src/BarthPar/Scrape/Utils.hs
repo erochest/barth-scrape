@@ -2,12 +2,14 @@ module BarthPar.Scrape.Utils where
 
 
 import           Control.Error
-import qualified Data.Text          as T
+import qualified Data.Text             as T
 import           Data.Text.Read
 import           Debug.Trace
 import           Text.Groom
 import           Text.Numeral.Roman
 -- import           Control.Concurrent.Async
+
+import           BarthPar.Scrape.Types
 
 
 tshow :: Show a => a -> T.Text
@@ -19,16 +21,21 @@ watch msg x = trace (msg ++ ": " ++ groom x) x
 watchM :: (Monad m, Show a) => String -> a -> m a
 watchM msg x = traceM (msg ++ ": " ++ groom x) >> return x
 
-forceS :: String -> [a] -> Script a
-forceS _ (x:_) = return x
-forceS e []    = throwE e
+forcePS :: String -> [a] -> PureScript a
+forcePS _ (x:_) = Right x
+forcePS e []    = Left  e
 
 smapConcurrently :: Traversable t => (a -> Script b) -> t a -> Script (t b)
 -- smapConcurrently f = scriptIO . mapConcurrently (runScript . f)
 smapConcurrently = mapM
 
-decimalS :: Integral a => T.Text -> Script (a, T.Text)
-decimalS = hoistEither . decimal
+decimalPS :: Integral a => T.Text -> PureScript a
+decimalPS input =
+    case decimal input of
+      Right (i, lo)
+          | T.null lo -> Right i
+          | otherwise -> Left  $ "Trailing input: \"" ++ T.unpack lo ++ "\""
+      Left e          -> Left e
 
-fromRomanS :: T.Text -> Script Int
-fromRomanS s = fromRoman s ?? ("Unable to parse " ++ show s)
+fromRomanPS :: T.Text -> PureScript Int
+fromRomanPS s = note ("Unable to parse " ++ show s) $ fromRoman s
