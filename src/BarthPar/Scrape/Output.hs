@@ -8,7 +8,7 @@ module BarthPar.Scrape.Output where
 
 import           Control.Error
 import           Control.Monad
-import qualified Data.ByteString        as B
+-- import qualified Data.ByteString        as B
 import qualified Data.HashMap.Strict    as M
 import qualified Data.List              as L
 import qualified Data.Text              as T
@@ -92,9 +92,10 @@ writeOutput :: Output -> Script ()
 writeOutput Output{..} = traceM ("WRITE: " ++ _outputFilePath)
                          >> scriptIO
                          . withFile _outputFilePath WriteMode $ \h ->
-                         B.hPut h (encode _outputMetadata)
-                         >> hPutStrLn h "\n---\n\n"
-                         >> TLIO.hPutStr h (toLazyText _outputContent)
+                         -- B.hPut h (encode _outputMetadata)
+                         -- >> hPutStrLn h "\n---\n\n"
+                         -- >>
+                         TLIO.hPutStr h (toLazyText _outputContent)
 
 writePage :: FilePath -> Page -> Script ()
 writePage dirname page@Page{..} = do
