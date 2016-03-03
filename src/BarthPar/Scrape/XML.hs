@@ -13,7 +13,6 @@ import           Text.XML
 import           Text.XML.Cursor
 import           Text.XML.Lens   (nodes)
 
--- TODO: can these all uses lenses instead of cursors?
 
 isContent :: T.Text -> Cursor -> Bool
 isContent c e = (== c) . T.concat $ e $// content

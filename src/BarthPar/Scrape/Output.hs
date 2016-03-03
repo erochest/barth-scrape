@@ -10,7 +10,6 @@ import           Control.Error
 import           Control.Monad
 -- import qualified Data.ByteString        as B
 import qualified Data.HashMap.Strict    as M
-import qualified Data.List              as L
 import qualified Data.Text              as T
 import           Data.Text.Buildable
 import           Data.Text.Format       hiding (build)
@@ -40,14 +39,12 @@ findFileName template n = do
     filename = TL.unpack . format template . Only $ left 3 '0' n
 
 cleanOutputs :: FilePath -> Script ()
-cleanOutputs outputDir = do
-  rmFiles outputDir
-  rmFiles "dump"
+cleanOutputs outputDir = ensureClean outputDir >> ensureClean "dump"
   where
-    rmFiles :: FilePath -> Script ()
-    rmFiles dirname = mapM_ (scriptIO . removeFile . (dirname </>))
-                      . filter (not . ("." `L.isPrefixOf`))
-                    =<< scriptIO (getDirectoryContents dirname)
+    ensureClean :: FilePath -> Script()
+    ensureClean dirname =
+        scriptIO (createDirectoryIfMissing True dirname) >>
+                 scriptIO (removeDirectoryRecursive dirname)
 
 dumpPage :: String -> XML.Document -> Script XML.Document
 dumpPage source doc = do
