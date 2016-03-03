@@ -23,16 +23,16 @@ import           BarthPar.Scrape.XML
 
 
 scrape :: Bool -> FilePath -> Either FilePath String -> Script ()
-scrape clean outputDir inputRoot = do
+scrape clean outputDir inputRoot = toScript False TargetNone $ do
   when clean $
        cleanOutputs outputDir
   input <- case fmap parseURI inputRoot of
              Right (Just uri) -> return $ Right uri
              Left filePath    -> return $ Left filePath
-             Right Nothing    -> throwE "Invalid root URL."
+             Right Nothing    -> throwS "Invalid root URL."
   scrapeTOC input >>= mapM_ (writePage outputDir)
 
-scrapeTOC :: InputSource -> Script [Page]
+scrapeTOC :: InputSource -> Scrape [Page]
 scrapeTOC input =
     fmap concat . smapConcurrently (uncurry scrapeVolumePage)
         =<< scrapeTOCPage input "Table of Contents" (T.isPrefixOf "CD ")
@@ -43,7 +43,7 @@ scrapeTOCPage :: InputSource
               -- ^ The content of A tags to look for.
               -> (T.Text -> Bool)
               -- ^ A predicate to find which links to move to next.
-              -> Script [(T.Text, InputSource)]
+              -> Scrape [(T.Text, InputSource)]
                  -- ^ A list of A tag contents and @hrefs.
 scrapeTOCPage input title f =
     mapMaybe (sequenceA . fmap (appendInput input))
@@ -52,12 +52,12 @@ scrapeTOCPage input title f =
                  . fromDocument
                  <$> dl (Just title) input
 
-scrapeVolumePage :: T.Text -> InputSource -> Script [Page]
+scrapeVolumePage :: T.Text -> InputSource -> Scrape [Page]
 scrapeVolumePage volName input =
     smapConcurrently (uncurry (scrapePage volName))
         =<< scrapeTOCPage input "View Text" (T.isPrefixOf "§ ")
 
-scrapePage :: VolumeTitle -> T.Text -> InputSource -> Script Page
+scrapePage :: VolumeTitle -> T.Text -> InputSource -> Scrape Page
 scrapePage volName pageName input = do
     doc <- dl (Just $ volName <> " | " <> pageName) input
     -- writeDoc "output/doc.html" doc

@@ -1,7 +1,11 @@
-{-# LANGUAGE OverloadedLists   #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
-{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE DeriveDataTypeable         #-}
+{-# LANGUAGE DeriveFunctor              #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedLists            #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RecordWildCards            #-}
+{-# LANGUAGE TemplateHaskell            #-}
 
 
 module BarthPar.Scrape.Types where
@@ -9,12 +13,15 @@ module BarthPar.Scrape.Types where
 
 import           Control.Error
 import           Control.Lens           hiding ((.=))
+import           Control.Monad.Reader
+import           Data.Data
 import qualified Data.HashMap.Strict    as M
 import           Data.Monoid
 import qualified Data.Text              as T
 import           Data.Text.Buildable
 import           Data.Text.Lazy.Builder
 import           Data.Yaml
+import           GHC.Generics
 import           Network.URI
 import           Text.Numeral.Roman
 import qualified Text.XML               as XML
@@ -33,8 +40,41 @@ type MetaMap       = Object
 type InputSource   = Either String URI
 type PureScript    = Either String
 
-io :: PureScript a -> Script a
-io = hoistEither
+data MetadataTarget
+    = TargetNone
+    | TargetYamlHeader
+    | TargetJSON
+    deriving (Show, Eq, Ord, Enum, Bounded, Data, Typeable, Generic)
+$(makePrisms ''MetadataTarget)
+
+data ScrapeState
+    = ScrapeState
+    { _scrapeDebugging :: !Bool
+    , _scrapeMetadata  :: !MetadataTarget
+    } deriving (Show, Eq, Data, Typeable, Generic)
+$(makeLenses ''ScrapeState)
+
+newtype Scrape a = Scrape { unScrape :: ReaderT ScrapeState Script a }
+    deriving (Functor, Applicative, Monad, MonadReader ScrapeState)
+
+toScript :: Bool -> MetadataTarget-> Scrape a -> Script a
+toScript debugging target s =
+    runReaderT (unScrape s) $ ScrapeState debugging target
+
+runScrape :: Bool -> MetadataTarget -> Scrape a -> IO a
+runScrape debugging target s = runScript $ toScript debugging target s
+
+io :: PureScript a -> Scrape a
+io ps = Scrape . ReaderT $ const $ hoistEither ps
+
+scrape :: Script a -> Scrape a
+scrape s = Scrape . ReaderT $ const s
+
+scrapeIO :: IO a -> Scrape a
+scrapeIO s = Scrape . ReaderT $ const $ scriptIO s
+
+throwS :: String -> Scrape a
+throwS = scrape . throwE
 
 class Metadata a where
     asMetadata :: a -> MetaMap

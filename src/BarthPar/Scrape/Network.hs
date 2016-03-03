@@ -24,9 +24,9 @@ import           BarthPar.Scrape.Types
 import           BarthPar.XML
 
 
-dl :: Maybe T.Text -> InputSource -> Script XML.Document
+dl :: Maybe T.Text -> InputSource -> Scrape XML.Document
 dl title (Right rootUrl) = do
-  scriptIO . putStrLn
+  scrapeIO . putStrLn
                . ("DOWNLOAD: " ++)
                $ maybe ("<" ++ uri ++ ">") ( (++ ")")
                                            . (++ uri)
@@ -35,12 +35,12 @@ dl title (Right rootUrl) = do
                                            . T.unpack
                                            ) title
   unnest . parseTags . decodeUtf8 . B.toStrict . view responseBody
-                 <$> scriptIO (get uri)
+                 <$> scrapeIO (get uri)
     where
       uri = show rootUrl
 
 dl title (Left filePath) = do
-  scriptIO . putStrLn
+  scrapeIO . putStrLn
                . ("READ: " ++)
                $ maybe ("<" ++ filePath ++ ">") ( (++ ")")
                                                 . (++ filePath)
@@ -48,7 +48,7 @@ dl title (Left filePath) = do
                                                 . (++ "](")
                                                 . T.unpack
                                                 ) title
-  unnest . parseTags <$> scriptIO (TIO.readFile filePath)
+  unnest . parseTags <$> scrapeIO (TIO.readFile filePath)
 
 appendInput :: InputSource -> T.Text -> Maybe InputSource
 appendInput (Right uri)     app = Right <$> appendUri uri app

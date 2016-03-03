@@ -2,6 +2,8 @@ module BarthPar.Scrape.Utils where
 
 
 import           Control.Error
+import           Control.Lens
+import           Control.Monad         (when)
 import qualified Data.Text             as T
 import           Data.Text.Read
 import           Debug.Trace
@@ -25,7 +27,7 @@ forcePS :: String -> [a] -> PureScript a
 forcePS _ (x:_) = Right x
 forcePS e []    = Left  e
 
-smapConcurrently :: Traversable t => (a -> Script b) -> t a -> Script (t b)
+smapConcurrently :: Traversable t => (a -> Scrape b) -> t a -> Scrape (t b)
 -- smapConcurrently f = scriptIO . mapConcurrently (runScript . f)
 smapConcurrently = mapM
 
@@ -39,3 +41,15 @@ decimalPS input =
 
 fromRomanPS :: T.Text -> PureScript Int
 fromRomanPS s = note ("Unable to parse " ++ show s) $ fromRoman s
+
+debugging :: Scrape () -> Scrape ()
+debugging s = do
+  debug <- view scrapeDebugging
+  when debug s
+
+debugging' :: a -> Scrape a -> Scrape a
+debugging' a s = do
+  debug <- view scrapeDebugging
+  if debug
+  then s
+  else return a

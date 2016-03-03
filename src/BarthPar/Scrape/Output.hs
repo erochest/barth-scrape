@@ -6,7 +6,6 @@
 module BarthPar.Scrape.Output where
 
 
-import           Control.Error
 import           Control.Monad
 -- import qualified Data.ByteString        as B
 import qualified Data.HashMap.Strict    as M
@@ -27,29 +26,33 @@ import           Text.XML
 import qualified Text.XML               as XML
 
 import           BarthPar.Scrape.Types
+import           BarthPar.Scrape.Utils
 
 
-findFileName :: Format -> Int -> Script FilePath
+findFileName :: Format -> Int -> Scrape FilePath
 findFileName template n = do
-  exists <- scriptIO $ doesFileExist filename
+  exists <- scrapeIO $ doesFileExist filename
   if exists
   then findFileName template $ succ n
   else return filename
   where
     filename = TL.unpack . format template . Only $ left 3 '0' n
 
-cleanOutputs :: FilePath -> Script ()
-cleanOutputs outputDir = ensureClean outputDir >> ensureClean "dump"
+cleanOutputs :: FilePath -> Scrape ()
+cleanOutputs outputDir = do
+  ensureClean outputDir
+  debugging $
+       ensureClean "dump"
   where
-    ensureClean :: FilePath -> Script()
+    ensureClean :: FilePath -> Scrape()
     ensureClean dirname =
-        scriptIO (createDirectoryIfMissing True dirname) >>
-                 scriptIO (removeDirectoryRecursive dirname)
+        scrapeIO (createDirectoryIfMissing True dirname) >>
+                 scrapeIO (removeDirectoryRecursive dirname)
 
-dumpPage :: String -> XML.Document -> Script XML.Document
-dumpPage source doc = do
+dumpPage :: String -> XML.Document -> Scrape XML.Document
+dumpPage source doc = debugging' doc $ do
   filename <- findFileName "dump/{}-page.html" 0
-  scriptIO $ withFile filename WriteMode $ \f -> do
+  scrapeIO $ withFile filename WriteMode $ \f -> do
                      TIO.hPutStrLn f "<!--"
                      hprint f "source: {}\n" $ Only source
                      TIO.hPutStrLn f "-->\n"
@@ -59,20 +62,20 @@ dumpPage source doc = do
                                              }) doc
   return doc
 
-dumpPrint :: Show a => String -> a -> Script a
-dumpPrint source x = do
+dumpPrint :: Show a => String -> a -> Scrape a
+dumpPrint source x = debugging' x $ do
   filename <- findFileName "dump/{}-show.html" 0
-  scriptIO $ withFile filename WriteMode $ \f -> do
+  scrapeIO $ withFile filename WriteMode $ \f -> do
                        TIO.hPutStrLn f "---"
                        hprint f "source: {}\n" $ Only source
                        TIO.hPutStrLn f "---\n"
                        TIO.hPutStrLn f . T.pack $ groom x
   return x
 
-dumpText :: String -> T.Text -> Script T.Text
-dumpText source x = do
+dumpText :: String -> T.Text -> Scrape T.Text
+dumpText source x = debugging' x $ do
   filename <- findFileName "dump/{}-text.html" 0
-  scriptIO . TIO.writeFile filename $ mconcat
+  scrapeIO . TIO.writeFile filename $ mconcat
                [ "---\n"
                , T.pack source, "\n"
                , "===\n"
@@ -80,21 +83,21 @@ dumpText source x = do
                ]
   return x
 
-dumpEl :: String -> XML.Element -> Script XML.Element
-dumpEl source e = do
+dumpEl :: String -> XML.Element -> Scrape XML.Element
+dumpEl source e = debugging' e $ do
     void . dumpPage source $ XML.Document (XML.Prologue [] Nothing []) e []
     return e
 
-writeOutput :: Output -> Script ()
+writeOutput :: Output -> Scrape ()
 writeOutput Output{..} = traceM ("WRITE: " ++ _outputFilePath)
-                         >> scriptIO
+                         >> scrapeIO
                          . withFile _outputFilePath WriteMode $ \h ->
                          -- B.hPut h (encode _outputMetadata)
                          -- >> hPutStrLn h "\n---\n\n"
                          -- >>
                          TLIO.hPutStr h (toLazyText _outputContent)
 
-writePage :: FilePath -> Page -> Script ()
+writePage :: FilePath -> Page -> Scrape ()
 writePage dirname page@Page{..} = do
   let pageMeta = M.singleton "page" . Object $ asMetadata page
   writeOutput $ Output
@@ -138,19 +141,19 @@ wrapNodes nds =
        (XML.Element "div" mempty nds)
        []
 
-writeNodes :: FilePath -> [XML.Node] -> Script XML.Document
+writeNodes :: FilePath -> [XML.Node] -> Scrape XML.Document
 writeNodes filename nds = do
     writeDoc filename doc
     return doc
     where
       doc = wrapNodes nds
 
-writeDoc :: FilePath -> XML.Document -> Script ()
+writeDoc :: FilePath -> XML.Document -> Scrape ()
 writeDoc filename doc =
-    scriptIO $ XML.writeFile (XML.def { XML.rsPretty = True }) filename doc
+    scrapeIO $ XML.writeFile (XML.def { XML.rsPretty = True }) filename doc
 
-writePairs :: FilePath -> [(T.Text, T.Text)] -> Script ()
-writePairs filename = scriptIO
+writePairs :: FilePath -> [(T.Text, T.Text)] -> Scrape ()
+writePairs filename = scrapeIO
                       . TIO.writeFile filename
                       . T.unlines
                       . map (\(a, b) -> T.concat [a, "\t", b])
