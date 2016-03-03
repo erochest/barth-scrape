@@ -22,16 +22,17 @@ csvToJsonOpts =
 
 inputOpts :: Parser (Either FilePath String)
 inputOpts =
-    (fmap Right (strOption (  short 'u' <> long "root-url" <> metavar "URL"
-                           <> help "The URL for the root to scrape.")))
+    fmap Right (strOption (  short 'u' <> long "root-url" <> metavar "URL"
+                          <> help "The URL for the root to scrape."))
     <|>
-    (fmap Left (strOption (  short 'f' <> long "root-file" <> metavar "FILEPATH"
-                          <> help "The path to the root file to scrape.")))
+    fmap Left (strOption (  short 'f' <> long "root-file" <> metavar "FILEPATH"
+                         <> help "The path to the root file to scrape."))
 
 scrapeOpts :: Parser Actions
 scrapeOpts =
     Scrape
-    <$> switch    (  short 'c' <> long "clean"
+    <$> switch    (  short 'd' <> long "debug" <> help "More debugging output.")
+    <*> switch    (  short 'c' <> long "clean"
                   <> help "Remove all files from the output directory before\
                           \ processing.")
     <*> inputOpts

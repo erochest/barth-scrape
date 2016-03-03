@@ -18,15 +18,16 @@ import           GHC.Generics
 
 data Actions
     = CsvToJson
-      { jsonInputFile  :: !FilePath
-      , jsonOutputFile :: !FilePath
-      , jsonChunkSize  :: !Int
-      }
+    { jsonInputFile  :: !FilePath
+    , jsonOutputFile :: !FilePath
+    , jsonChunkSize  :: !Int
+    }
     | Scrape
-      { scrapeClean     :: !Bool
-      , scrapeInput     :: !(Either FilePath String)
-      , scrapeOutputDir :: !FilePath
-      }
+    { scrapeDebug     :: !Bool
+    , scrapeClean     :: !Bool
+    , scrapeInput     :: !(Either FilePath String)
+    , scrapeOutputDir :: !FilePath
+    }
     deriving (Show)
 
 type TopicId     = Int
