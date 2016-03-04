@@ -1,9 +1,14 @@
+{-# LANGUAGE LambdaCase #-}
+
+
 module Opts where
 
 
 import           Control.Error
-import           Options.Applicative hiding ((<$>), (<*>))
+import           Data.Char
+import           Options.Applicative   hiding ((<$>), (<*>))
 
+import           BarthPar.Scrape.Types hiding (Scrape)
 import           BarthPar.Types
 
 
@@ -36,8 +41,20 @@ scrapeOpts =
                   <> help "Remove all files from the output directory before\
                           \ processing.")
     <*> inputOpts
+    <*> option mtVal (  short 'm' <> long "metadata" <> metavar "TARGET"
+                     <> value TargetNone
+                     <> help "How to handle the metadata. This is one of\
+                             \ 'none' (none), 'yaml' (YAML header),\
+                             \ 'json' (JSON side file).")
     <*> strOption (  short 'o' <> long "output" <> metavar "DIRNAME"
                   <> help "The directory to put the scraped documents into.")
+
+mtVal :: ReadM MetadataTarget
+mtVal = fmap (fmap toLower) str >>= \case
+        'n':_ -> return TargetNone
+        'y':_ -> return TargetYamlHeader
+        'j':_ -> return TargetJSON
+        e     -> fail $ "Invalid metadata target: '" ++ e ++ "'."
 
 opts' :: Parser Actions
 opts' = subparser

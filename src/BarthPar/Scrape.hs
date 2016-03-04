@@ -22,8 +22,9 @@ import           BarthPar.Scrape.Utils
 import           BarthPar.Scrape.XML
 
 
-scrape :: Bool -> Bool -> FilePath -> Either FilePath String -> Script ()
-scrape debug clean outputDir inputRoot = toScript debug TargetNone $ do
+scrape :: Bool -> Bool -> MetadataTarget -> FilePath -> Either FilePath String
+       -> Script ()
+scrape debug clean mdata outputDir inputRoot = toScript debug mdata $ do
   when clean $
        cleanOutputs outputDir
   input <- case fmap parseURI inputRoot of

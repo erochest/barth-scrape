@@ -6,8 +6,11 @@
 module BarthPar.Scrape.Output where
 
 
+import           Control.Lens
 import           Control.Monad
--- import qualified Data.ByteString        as B
+import qualified Data.Aeson             as A
+import qualified Data.ByteString        as B
+import qualified Data.ByteString.Lazy   as BL
 import qualified Data.HashMap.Strict    as M
 import qualified Data.Text              as T
 import           Data.Text.Buildable
@@ -17,7 +20,6 @@ import qualified Data.Text.Lazy         as TL
 import           Data.Text.Lazy.Builder
 import qualified Data.Text.Lazy.IO      as TLIO
 import           Data.Yaml.Aeson
-import           Debug.Trace
 import           System.Directory
 import           System.FilePath
 import           System.IO
@@ -91,13 +93,17 @@ dumpEl source e = debugging' e $ do
     return e
 
 writeOutput :: Output -> Scrape ()
-writeOutput Output{..} = traceM ("WRITE: " ++ _outputFilePath)
-                         >> scrapeIO
-                         . withFile _outputFilePath WriteMode $ \h ->
-                         -- B.hPut h (encode _outputMetadata)
-                         -- >> hPutStrLn h "\n---\n\n"
-                         -- >>
-                         TLIO.hPutStr h (toLazyText _outputContent)
+writeOutput Output{..} = do
+  mdTarget <- view scrapeMetadata
+  scrapeIO . withFile _outputFilePath WriteMode $
+               \h -> do
+                 case mdTarget of
+                   TargetNone -> return ()
+                   TargetYamlHeader -> B.hPut h (encode _outputMetadata)
+                                       >> hPutStrLn h "\n---\n\n"
+                   TargetJSON -> BL.writeFile (_outputFilePath -<.> "json")
+                                 $ A.encode _outputMetadata
+                 TLIO.hPutStr h (toLazyText _outputContent)
 
 writePage :: FilePath -> Page -> Scrape ()
 writePage dirname page@Page{..} = do

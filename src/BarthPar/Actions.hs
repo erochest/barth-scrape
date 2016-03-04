@@ -32,4 +32,5 @@ action CsvToJson{..} = do
         . Network nodes
         $ makeLinks tokenIndex byWord
 
-action Scrape{..} = scrape scrapeDebug scrapeClean scrapeOutputDir scrapeInput
+action Scrape{..} = scrape scrapeDebug scrapeClean scrapeMetadata
+                    scrapeOutputDir scrapeInput

@@ -33,7 +33,7 @@ test:
 run: build
 	rm -f dump/*
 	stack exec -- barth-par scrape --clean --output output/ \
-		--root-file $(URL)
+		--root-file $(URL) --metadata none
 
 bench: build
 	for n in 0 1 2 4 8 16 32 64 128 256 512 1024 2048 4096; do echo $$n; \

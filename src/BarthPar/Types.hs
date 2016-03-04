@@ -15,6 +15,8 @@ import qualified Data.HashMap.Strict         as M
 import qualified Data.Vector.Unboxed         as UV
 import           GHC.Generics
 
+import           BarthPar.Scrape.Types
+
 
 data Actions
     = CsvToJson
@@ -26,6 +28,7 @@ data Actions
     { scrapeDebug     :: !Bool
     , scrapeClean     :: !Bool
     , scrapeInput     :: !(Either FilePath String)
+    , scrapeMetadata  :: !MetadataTarget
     , scrapeOutputDir :: !FilePath
     }
     deriving (Show)
