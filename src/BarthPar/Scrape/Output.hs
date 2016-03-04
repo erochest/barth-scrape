@@ -44,10 +44,12 @@ cleanOutputs outputDir = do
   debugging $
        ensureClean "dump"
   where
-    ensureClean :: FilePath -> Scrape()
-    ensureClean dirname =
-        scrapeIO (createDirectoryIfMissing True dirname) >>
-                 scrapeIO (removeDirectoryRecursive dirname)
+    ensureClean :: FilePath -> Scrape ()
+    ensureClean dirname = scrapeIO $ do
+                            exists <- doesDirectoryExist dirname
+                            when exists $
+                                 removeDirectoryRecursive dirname
+                            createDirectoryIfMissing True dirname
 
 dumpPage :: String -> XML.Document -> Scrape XML.Document
 dumpPage source doc = debugging' doc $ do
