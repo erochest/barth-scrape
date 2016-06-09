@@ -17,6 +17,7 @@ import           Data.Traversable
 import           Network.URI
 import           Network.Wreq
 import           System.FilePath
+import           System.IO
 import           Text.HTML.TagSoup
 import qualified Text.XML              as XML
 
@@ -26,7 +27,7 @@ import           BarthPar.XML
 
 dl :: Maybe T.Text -> InputSource -> Scrape XML.Document
 dl title (Right rootUrl) = do
-  scrapeIO . putStrLn
+  scrapeIO . hPutStrLn stderr
                . ("DOWNLOAD: " ++)
                $ maybe ("<" ++ uri ++ ">") ( (++ ")")
                                            . (++ uri)
@@ -40,7 +41,7 @@ dl title (Right rootUrl) = do
       uri = show rootUrl
 
 dl title (Left filePath) = do
-  scrapeIO . putStrLn
+  scrapeIO . hPutStrLn stderr
                . ("READ: " ++)
                $ maybe ("<" ++ filePath ++ ">") ( (++ ")")
                                                 . (++ filePath)

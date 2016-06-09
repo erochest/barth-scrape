@@ -53,8 +53,8 @@ cleanOutputs outputDir = do
                                  removeDirectoryRecursive dirname
                             createDirectoryIfMissing True dirname
 
-dumpPage :: String -> XML.Document -> Scrape XML.Document
-dumpPage source doc = debugging' doc $ do
+dumpPage :: String -> XML.Document -> Scrape (String, XML.Document)
+dumpPage source doc = debugging' ("", doc) $ do
   filename <- findFileName "dump/{}-page.html" 0
   scrapeIO $ withFile filename WriteMode $ \f -> do
                      TIO.hPutStrLn f "<!--"
@@ -64,7 +64,7 @@ dumpPage source doc = debugging' doc $ do
                             $ XML.renderText (XML.def
                                              { rsPretty = True
                                              }) doc
-  return doc
+  return (filename, doc)
 
 dumpPrint :: Show a => String -> a -> Scrape a
 dumpPrint source x = debugging' x $ do
@@ -112,8 +112,9 @@ writePage dirname page@Page{..} = do
                   (dirname </> makeFileName _pageVolumeId (0 :: Int) 0)
                   pageMeta
                   (build page)
-  forM_ _pageContent $ \(n, s@Section{_sectionHead}) ->
-      let filename = dirname
+  forM_ _pageContent $ \s@Section{_sectionN, _sectionHead} ->
+      let n        = _sectionN
+          filename = dirname
                      </> makeFileName _pageVolumeId (maybe 0 fst _sectionHead) n
           metadata = M.insert "paragraph" (toJSON n)
                      . M.insert "section" (Object $ asMetadata s)

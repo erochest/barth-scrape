@@ -11,6 +11,7 @@
 module BarthPar.Scrape.Types where
 
 
+import           Control.DeepSeq
 import           Control.Error
 import           Control.Lens           hiding ((.=))
 import           Control.Monad.Reader
@@ -47,12 +48,16 @@ data MetadataTarget
     deriving (Show, Eq, Ord, Enum, Bounded, Data, Typeable, Generic)
 $(makePrisms ''MetadataTarget)
 
+instance NFData MetadataTarget
+
 data ScrapeState
     = ScrapeState
     { _scrapeDebugging :: !Bool
     , _scrapeMetadata  :: !MetadataTarget
     } deriving (Show, Eq, Data, Typeable, Generic)
 $(makeLenses ''ScrapeState)
+
+instance NFData ScrapeState
 
 newtype Scrape a = Scrape { unScrape :: ReaderT ScrapeState Script a }
     deriving (Functor, Applicative, Monad, MonadReader ScrapeState)
@@ -86,9 +91,11 @@ data VolumeID
       , _volumeSection :: !Int
       }
     | Appendix { _appendixNumber :: !Int }
-    deriving (Show, Eq)
+    deriving (Show, Eq, Data, Typeable, Generic)
 $(makePrisms ''VolumeID)
 $(makeLenses ''VolumeID)
+
+instance NFData VolumeID
 
 instance Buildable VolumeID where
     build (Volume v s p) = mconcat [ "Volume "
@@ -110,11 +117,14 @@ instance Metadata VolumeID where
 
 data Section
     = Section
-    { _sectionHead     :: !(Maybe SectionHeader)
+    { _sectionN        :: !Int
+    , _sectionHead     :: !(Maybe SectionHeader)
     , _sectionContent  :: ![XML.Element]
     , _sectionExcursus :: !(Maybe XML.Element)
-    } deriving (Show, Eq)
+    } deriving (Show, Eq, Data, Typeable, Generic)
 $(makeLenses ''Section)
+
+instance NFData Section
 
 instance Buildable Section where
     build Section{..} =
@@ -136,13 +146,16 @@ data Page
     = Page
     { _pageVolumeId    :: !VolumeID
     , _pageVolumeTitle :: !VolumeTitle
-    , _pageAbstract    :: !XML.Element
-    , _pageContent     :: ![(Int, Section)]
-    } deriving (Show, Eq)
+    , _pageAbstract    :: !T.Text
+    , _pageContent     :: ![Section]
+    } deriving (Show, Eq, Data, Typeable, Generic)
 $(makeLenses ''Page)
+$(makePrisms ''Page)
+
+instance NFData Page
 
 instance Buildable Page where
-    build = buildElement . _pageAbstract
+    build = build . _pageAbstract
 
 instance Metadata Page where
     asMetadata Page{..} =

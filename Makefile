@@ -30,11 +30,18 @@ stack.yaml:
 test:
 	stack test barth-par:test:barth-par-specs $(FLAG)
 
+open:
+	open $(URL)
+
 run: build
 	rm -f dump/*
 	stack exec -- barth-par scrape --clean --output output/ \
 		--debug \
 		--root-file $(URL) --metadata yaml
+
+dump/run.out: build
+	make run &> run.out
+	mv run.out dump/
 
 bench: build
 	for n in 0 1 2 4 8 16 32 64 128 256 512 1024 2048 4096; do echo $$n; \

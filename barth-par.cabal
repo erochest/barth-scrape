@@ -44,6 +44,7 @@ library
                      , conduit-extra
                      , conduit-combinators
                      , containers
+                     , deepseq
                      , directory
                      , errors
                      , filepath
@@ -58,6 +59,7 @@ library
                      , tagsoup
                      , text
                      , text-format
+                     , transformers
                      , unordered-containers
                      , vector
                      , wreq

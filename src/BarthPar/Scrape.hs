@@ -12,6 +12,8 @@ import           Data.Monoid
 import qualified Data.Text               as T
 import           Network.URI
 import           Prelude                 hiding (div)
+import           System.IO
+-- import           Text.XML                (Node (..))
 import           Text.XML.Cursor
 
 import           BarthPar.Scrape.Network
@@ -51,7 +53,7 @@ scrapeTOCPage input title f =
                  . filter (f . fst)
                  . ($// tocEntries >=> tocPair title)
                  . fromDocument
-                 <$> dl (Just title) input
+                 <$> dl (Just $ "TOC: " <> title) input
 
 scrapeVolumePage :: T.Text -> InputSource -> Scrape [Page]
 scrapeVolumePage volName input =
@@ -60,8 +62,12 @@ scrapeVolumePage volName input =
 
 scrapePage :: VolumeTitle -> T.Text -> InputSource -> Scrape Page
 scrapePage volName pageName input = do
-    doc <- dl (Just $ volName <> " | " <> pageName) input
-    -- writeDoc "output/doc.html" doc
+    doc <- dl (Just $ "PAGE: " <> volName <> " | " <> pageName) input
+    (dumpFile, _) <- dumpPage "page" doc
+    scrapeIO . hPutStrLn stderr $ ">>> " ++ dumpFile
     let nds = fromDocument doc $// tinyurl >=> followingSibling >=> div
-    -- void . writeNodes "output/page.html" $ map node nds
+    {-
+     - void $ mapM_ (dumpEl (T.unpack $ pageName <> "-node"))
+     -      [ el | NodeElement el <- map node nds ]
+     -}
     io $ makePage volName pageName nds
