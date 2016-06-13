@@ -7,11 +7,14 @@ module BarthPar.Scrape.XML where
 import           Control.Arrow
 import           Control.Lens
 import           Control.Monad
-import qualified Data.Text       as T
-import           Prelude         hiding (div)
+import           Data.Maybe
+import qualified Data.Text             as T
+import           Prelude               hiding (div)
 import           Text.XML
 import           Text.XML.Cursor
-import           Text.XML.Lens   (nodes)
+import           Text.XML.Lens         (nodes)
+
+import           BarthPar.Scrape.Utils
 
 
 isContent :: T.Text -> Cursor -> Bool
@@ -55,12 +58,12 @@ tinyurl :: Axis
 tinyurl = div >=> attributeIs "id" "tinyurl"
 
 filterEl :: MonadPlus m => (Element -> Bool) -> Element -> m Element
-filterEl f = mfilter f . pure
-             >=> \e -> flip (set nodes) e
-                       <$> mapM (filterNode f) (elementNodes e)
+filterEl f e
+    | f e       = return $ e & over nodes (mapMaybe (filterNode f))
+    | otherwise = mzero
 
 filterNode :: MonadPlus m => (Element -> Bool) -> Node -> m Node
-filterNode f (NodeElement e)       = NodeElement <$> filterEl f e
-filterNode _ n@(NodeInstruction _) = pure n
-filterNode _ n@(NodeContent _)     = pure n
-filterNode _ n@(NodeComment _)     = pure n
+filterNode f   (NodeElement     e) = NodeElement <$> filterEl f e
+filterNode _ n@(NodeInstruction _) = return n
+filterNode _ n@(NodeContent     _) = return n
+filterNode _ n@(NodeComment     _) = return n
