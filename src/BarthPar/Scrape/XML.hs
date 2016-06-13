@@ -8,13 +8,14 @@ import           Control.Arrow
 import           Control.Lens
 import           Control.Monad
 import           Data.Maybe
-import qualified Data.Text             as T
-import           Prelude               hiding (div)
+import           Data.Monoid
+import qualified Data.Text              as T
+import qualified Data.Text.Lazy         as TL
+import           Data.Text.Lazy.Builder
+import           Prelude                hiding (div, span)
 import           Text.XML
 import           Text.XML.Cursor
-import           Text.XML.Lens         (nodes)
-
-import           BarthPar.Scrape.Utils
+import           Text.XML.Lens          (nodes)
 
 
 isContent :: T.Text -> Cursor -> Bool
@@ -39,11 +40,14 @@ tocLinks c = followingSibling
              >=> check (isContent c)
              >=> laxAttribute "href"
 
+span :: Axis
+span = laxElement "span"
+
 spanHead :: Axis
-spanHead = laxElement "span" >=> attributeIs "class" "head"
+spanHead = span >=> attributeIs "class" "head"
 
 excursus :: Axis
-excursus = laxElement "span" >=> attributeIs "class" "excursus"
+excursus = span >=> attributeIs "class" "excursus"
 
 div :: Axis
 div = laxElement "div"
@@ -67,3 +71,15 @@ filterNode f   (NodeElement     e) = NodeElement <$> filterEl f e
 filterNode _ n@(NodeInstruction _) = return n
 filterNode _ n@(NodeContent     _) = return n
 filterNode _ n@(NodeComment     _) = return n
+
+allText :: Node -> T.Text
+allText n = TL.toStrict . toLazyText $ buildText' n mempty
+
+buildText :: Node -> Builder
+buildText = (`buildText'` mempty)
+
+buildText' :: Node -> Builder -> Builder
+buildText' (NodeElement     e) b = foldr buildText' (singleton ' ' <> b) $ elementNodes e
+buildText' (NodeInstruction _) b = b
+buildText' (NodeContent     c) b = fromText c <> b
+buildText' (NodeComment     _) b = b

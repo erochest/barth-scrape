@@ -7,23 +7,23 @@ module BarthPar.Scrape.Read where
 
 import           Control.Applicative
 import           Control.Error
-import           Control.Lens          hiding ((<|))
+import           Control.Lens           hiding ((<|))
 import           Control.Monad
 import           Data.Bifunctor
 import           Data.Bitraversable
 import           Data.Char
 import           Data.Foldable
-import qualified Data.Map.Lazy         as M
-import           Data.Sequence         ((<|))
-import qualified Data.Sequence         as S
-import qualified Data.Text             as T
+import qualified Data.Map.Lazy          as M
+import           Data.Sequence          ((<|))
+import qualified Data.Sequence          as S
+import qualified Data.Text              as T
+import qualified Data.Text.Lazy         as TL
+import           Data.Text.Lazy.Builder
 import           Data.Text.Read
 import           Data.Tuple
-import           Prelude               hiding (div)
-import           Text.XML.Cursor       hiding (forceM)
-import           Text.XML.Lens         hiding (attributeIs, (<|))
-
--- import Debug.Trace
+import           Prelude                hiding (div, span)
+import           Text.XML.Cursor        hiding (forceM)
+import           Text.XML.Lens          hiding (attributeIs, (<|))
 
 import           BarthPar.Scrape.Types
 import           BarthPar.Scrape.Utils
@@ -70,14 +70,28 @@ readChildSections = fmap (toList . thd) . foldlM step (0, Nothing, S.empty)
                    )
 
 makePage :: VolumeTitle -> T.Text -> [Cursor] -> PureScript Page
-makePage vtitle pageName (h:a:cs) = do
-    vId   <- first ("Error parsing volume ID: " ++)
-          $  parseVolumeID vtitle pageName
-    title <- forceM "Missing VolumeTitle"
-          $  h $// (spanHead >=> child      >=> content)
-    ab    <- forceM "Missing Abstract"
-          $  a $|  (abstract >=> descendant >=> content)
-    Page vId title ab <$> readChildSections cs
+makePage vtitle pageName (h:a:cs) =
+    Page <$> first ("Error parsing volume ID: " ++)
+         (   parseVolumeID vtitle pageName)
+         <*> forceM "Missing VolumeTitle"
+         (  h $// (spanHead >=> child      >=> content))
+         <*> forceM "Missing Abstract" a'
+         <*> readChildSections cs'
+    where
+        (a', cs') = if length (h $/ span) == 1
+                    then (buildNodes $ a $|  abstract, cs)
+                    else (buildNodes $ h $// excursus, a:cs)
+
+        buildNodes :: [Cursor] -> [T.Text]
+        buildNodes = wrapL
+                   . normalize
+                   . TL.toStrict
+                   . toLazyText
+                   . foldMap (buildText . node)
+
+        wrapL :: T.Text -> [T.Text]
+        wrapL t | T.null t  = []
+                | otherwise = [t]
 
 makePage vtitle pageName _ =
     Left $ "Not enough nodes on " ++ T.unpack pageName ++ show vtitle
@@ -120,5 +134,6 @@ cleanSection =
       f e = not $ center e || noteLink e
 
       fEx :: Element -> Bool
-      fEx e = not $  noteLink e
+      fEx e = not $  center e
+                  || noteLink e
                   || Just "hiddennote" == M.lookup "class" (elementAttributes e)

@@ -28,9 +28,11 @@ import           Text.Numeral.Roman
 import qualified Text.XML               as XML
 import           Text.XML.Lens          hiding ((.=))
 
+import           BarthPar.Scrape.XML    (buildText)
+
 
 buildElement :: Element -> Builder
-buildElement = foldMap build . toListOf (entire . text)
+buildElement = buildText . NodeElement
 
 
 type VolumeTitle   = T.Text

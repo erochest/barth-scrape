@@ -81,3 +81,6 @@ debugging' a s = do
   if debug
   then s
   else return a
+
+normalize :: T.Text -> T.Text
+normalize = T.unwords . T.words

@@ -11,13 +11,14 @@ import           Control.Lens
 import           Data.Maybe
 import           Data.MonoTraversable hiding (Element)
 import qualified Data.MonoTraversable as MT
+import qualified Data.Text            as T
 import qualified Data.Text.Lazy       as TL
 import           Text.XML
 import           Text.XML.Lens
 
 import           Test.Hspec
 
-import           BarthPar.Scrape.XML  (filterEl)
+import           BarthPar.Scrape.XML  (allText, filterEl)
 
 
 class FromDocument a where
@@ -59,8 +60,16 @@ shouldFilterEl :: TL.Text -> (Element -> Bool) -> Maybe TL.Text -> Expectation
 shouldFilterEl input p =
     shouldFilter input (fmap DocEl . filterEl p . getEl)
 
+shouldBuild :: TL.Text -> T.Text -> Expectation
+shouldBuild input expected =
+    norm (allText . NodeElement . documentRoot $ parseText_ def input)
+        `shouldBe` expected
+    where
+        norm :: T.Text -> T.Text
+        norm = T.unwords . T.words
+
 spec :: Spec
-spec =
+spec = do
     describe "filterEl" $ do
         it "should filter out the root node that matches the predicate." $
             ("<span></span>" `shouldFilterEl`
@@ -96,3 +105,78 @@ spec =
                 (isNothing . preview (named "oops"))
                 ) (Just "<div><span><a></a></span><a></a>\
                         \<span><a></a><a></a></span></div>")
+
+    describe "allText" $ do
+        it "should pull text from nodes." $
+            "<a>link</a>" `shouldBuild` "link"
+        it "should walk multiple nodes." $
+            "<span><a>link 1</a><a> link 2</a></span>" `shouldBuild`
+                "link 1 link 2"
+        it "should walk depth first." $
+            "<span>a<span>b</span>c<span><span>d</span>e\
+            \<span>f</span></span></span>" `shouldBuild` "abcdef"
+        it "should property pull text from heavily noted and quoted text." $
+            let input = "<span class=\"excursus\">\
+                        \ <p>\
+                        \ Theology is \
+                        \ <span class=\"foreign\">\
+                        \ <span class=\"hiitalic\">\
+                        \ de divinitate ratio sive sermo\
+                        \ </span> \
+                        \ </span>\
+                        \ <a href=\"javascript:displayNote('2:0:-1:0', '/cgi-bin/asp/philo/dkbl/getnote.pl?c.830:2:0:-1:0.barth')\">\
+                        \ [note]\
+                        \ </a>\
+                        \ <span\
+                        \ class=\"hiddennote\"\
+                        \ id=\"note_2:0:-1:0\"\
+                        \ onClick=\"hideNote('2:0:-1:0')\"/>\
+                        \ (Augustine,\
+                        \ <chuck_temp_title>\
+                        \ <span class=\"hiitalic\">\
+                        \ De civ. Dei\
+                        \ </span>\
+                        \ </chuck_temp_title>\
+                        \ , VIII, 1).\
+                        \ <span class=\"foreign\">\
+                        \ Θεολόγος\
+                        \ </span>\
+                        \ est\
+                        \ <span class=\"foreign\">\
+                        \ ὁ τὸν θεὸν ἐκ θεοῦ ὲνώπιον τοῦ θεοῦ εἰς δόξαν αὐτοῦ λέγων\
+                        \ </span>\
+                        \ <a href=\"javascript:displayNote('2:0:-1:2', '/cgi-bin/asp/philo/dkbl/getnote.pl?c.830:2:0:-1:2.barth')\">\
+                        \ [note]\
+                        \ </a>\
+                        \ <span\
+                        \ class=\"hiddennote\"\
+                        \ id=\"note_2:0:-1:2\"\
+                        \ onClick=\"hideNote('2:0:-1:2')\"/>\
+                        \ (\
+                        \ <xref type=\"pub\">\
+                        \ <bibl>\
+                        \ <author>\
+                        \ Coccejus\
+                        \ </author>\
+                        \ ,\
+                        \ <chuck_temp_title>\
+                        \ <span class=\"hiitalic\">\
+                        \ Summa theol.\
+                        \ </span>\
+                        \ </chuck_temp_title>\
+                        \ ,\
+                        \ <date>\
+                        \ 1699\
+                        \ </date>\
+                        \ , 1, 1\
+                        \ </bibl>\
+                        \ </xref>\
+                        \ ).\
+                        \ </p>\
+                        \ </span>"
+                expected = "Theology is de divinitate ratio sive sermo [note] \
+                           \(Augustine, De civ. Dei , VIII, 1). Θεολόγος est ὁ \
+                           \τὸν θεὸν ἐκ θεοῦ ὲνώπιον τοῦ θεοῦ εἰς δόξαν αὐτοῦ \
+                           \λέγων [note] ( Coccejus , Summa theol. , 1699 , \
+                           \1, 1 )."
+            in  input `shouldBuild` expected
