@@ -12,6 +12,7 @@ import           Data.Csv
 import           Data.Data
 import           Data.Hashable
 import qualified Data.HashMap.Strict         as M
+import qualified Data.Text                   as T
 import qualified Data.Vector.Unboxed         as UV
 import           GHC.Generics
 
@@ -30,6 +31,13 @@ data Actions
     , scrapeInput     :: !(Either FilePath String)
     , scrapeMetadata  :: !MetadataTarget
     , scrapeOutputDir :: !FilePath
+    }
+    | ScrapePage
+    { pageFile      :: !FilePath
+    , pageVolume    :: !T.Text
+    , pageTitle     :: !T.Text
+    , pageMetadata  :: !MetadataTarget
+    , pageOutputDir :: !FilePath
     }
     deriving (Show)
 

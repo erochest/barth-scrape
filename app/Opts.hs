@@ -1,4 +1,5 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 
 module Opts where
@@ -6,6 +7,7 @@ module Opts where
 
 import           Control.Error
 import           Data.Char
+import qualified Data.Text             as T
 import           Options.Applicative   hiding ((<$>), (<*>))
 
 import           BarthPar.Scrape.Types hiding (Scrape)
@@ -49,6 +51,29 @@ scrapeOpts =
     <*> strOption (  short 'o' <> long "output" <> metavar "DIRNAME"
                   <> help "The directory to put the scraped documents into.")
 
+pageOpts :: Parser Actions
+pageOpts
+    = ScrapePage
+    <$> strOption (  short 'i' <> long "input" <> metavar "FILENAME"
+                  <> help "The page to process.")
+    <*> option (T.pack <$> str)
+               (  short 'V' <> long "volume" <> metavar "VOLUME_TITLE"
+               <> value "CD Volume I,1 (§§ 1-12)"
+               <> help "The volume title to use for this. \
+                       \Default = 'CD Volume I,1 (§§ 1-12)''.")
+    <*> option (T.pack <$> str)
+               (  short 'p' <> long "page" <> metavar "PAGE_TITLE"
+               <> value "§ 1 The Task of Dogmatics"
+               <> help "The page title to use for this. \
+                       \Default = '§ 1 The Task of Dogmatics'.")
+    <*> option mtVal (  short 'm' <> long "metadata" <> metavar "TARGET"
+                     <> value TargetNone
+                     <> help "How to handle the metadata. This is one of\
+                             \ 'none' (none), 'yaml' (YAML header),\
+                             \ 'json' (JSON side file).")
+    <*> strOption (  short 'o' <> long "output" <> metavar "DIRNAME"
+                  <> help "The directory to put the scraped documents into.")
+
 mtVal :: ReadM MetadataTarget
 mtVal = fmap (fmap toLower) str >>= \case
         'n':_ -> return TargetNone
@@ -60,11 +85,15 @@ opts' :: Parser Actions
 opts' = subparser
         (  command "csv-to-json"
                (info (helper <*> csvToJsonOpts)
-                        (progDesc "Convert the MALLET CSV output to JSON."))
+                    (progDesc "Convert the MALLET CSV output to JSON."))
         <> command "scrape"
                (info (helper <*> scrapeOpts)
-                         (progDesc "Download and extract the text from the\
-                                   \ site."))
+                    (progDesc "Download and extract the text from the\
+                              \ site."))
+        <> command "page"
+                (info (helper <*> pageOpts)
+                    (progDesc "Download and extract the text from a\
+                              \ single page."))
         )
 
 opts :: ParserInfo Actions

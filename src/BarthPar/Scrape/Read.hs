@@ -13,6 +13,7 @@ import           Data.Bifunctor
 import           Data.Bitraversable
 import           Data.Char
 import           Data.Foldable
+import qualified Data.Map.Lazy         as M
 import           Data.Sequence         ((<|))
 import qualified Data.Sequence         as S
 import qualified Data.Text             as T
@@ -111,7 +112,7 @@ readSection n c =
                 .   listToMaybe
                 $   c
                 $/  excursus
-                >=> toListOf _Element . watch "EXCURSUS" . node
+                >=> toListOf _Element . node
                 )
 
 -- TODO: Think I can use Control.Lens.Plated here
@@ -119,7 +120,7 @@ readSection n c =
 cleanSection :: Section -> Section
 cleanSection =
     over sectionContent (>>= filterEl f)
-             . over sectionExcursus (>>= filterEl f)
+             . over sectionExcursus (>>= filterEl fEx)
     where
       center :: Element -> Bool
       center = (== "center") . view name
@@ -129,3 +130,7 @@ cleanSection =
 
       f :: Element -> Bool
       f e = not $ center e || noteLink e
+
+      fEx :: Element -> Bool
+      fEx e = not $  noteLink e
+                  || Just "hiddennote" == M.lookup "class" (elementAttributes e)

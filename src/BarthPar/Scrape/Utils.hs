@@ -28,6 +28,9 @@ watchM msg x = traceM (msg ++ ": " ++ groom x) >> return x
 watchF :: Show b => String -> (a -> b) -> a -> a
 watchF msg f x = trace (msg ++ ": " ++ groom (f x)) x
 
+watchMF :: (Monad m, Show b) => String -> (a -> b) -> a -> m a
+watchMF msg f x = traceM (msg ++ ": " ++ groom (f x)) >> return x
+
 watchPS :: String -> PureScript a -> PureScript a
 watchPS tag r@(Right _) = trace (tag ++ " OK")        r
 watchPS tag r@(Left  e) = trace (tag ++ " ERR " ++ e) r

@@ -39,9 +39,12 @@ run: build
 		--debug \
 		--root-file $(URL) --metadata yaml
 
-dump/run.out: build
-	make run &> run.out
-	mv run.out dump/
+single/run.out: build
+	stack exec -- barth-par page \
+		--input    /Users/err8n/c/solomon.dkbl.alexanderstreet.com/cgi-bin/asp/philo/dkbl/getobject.pl?c.830:1.barth.html \
+		--metadata yaml    \
+		--output   single/ \
+		&> single/run.out
 
 bench: build
 	for n in 0 1 2 4 8 16 32 64 128 256 512 1024 2048 4096; do echo $$n; \

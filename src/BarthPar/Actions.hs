@@ -14,6 +14,7 @@ import qualified Data.Vector          as V
 import           BarthPar.Data
 import           BarthPar.Graph
 import           BarthPar.Scrape
+import           BarthPar.Scrape.Single
 import           BarthPar.Types
 
 
@@ -34,3 +35,6 @@ action CsvToJson{..} = do
 
 action Scrape{..} = scrape scrapeDebug scrapeClean scrapeMetadata
                     scrapeOutputDir scrapeInput
+
+action ScrapePage{..} = scrapeSingle pageFile pageVolume pageTitle pageMetadata
+                        pageOutputDir
