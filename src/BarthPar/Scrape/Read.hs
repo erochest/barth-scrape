@@ -79,18 +79,6 @@ makePage vtitle pageName (h:a:cs) = do
           $  a $|  (abstract >=> descendant >=> content)
     Page vId title ab <$> readChildSections cs
 
-
-    {-
-     -       <*> forcePS "Unable to find excursus/abstract"
-     -               (concatMap ($// spanHead
-     -                          >=> followingSibling
-     -                          >=> excursus
-     -                          >=> toListOf _Element
-     -                          . node
-     -                          )
-     -                cs)
-     -}
-
 makePage vtitle pageName _ =
     Left $ "Not enough nodes on " ++ T.unpack pageName ++ show vtitle
 

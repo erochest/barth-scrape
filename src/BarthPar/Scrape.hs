@@ -66,8 +66,4 @@ scrapePage volName pageName input = do
     (dumpFile, _) <- dumpPage "page" doc
     scrapeIO . hPutStrLn stderr $ ">>> " ++ dumpFile
     let nds = fromDocument doc $// tinyurl >=> followingSibling >=> div
-    {-
-     - void $ mapM_ (dumpEl (T.unpack $ pageName <> "-node"))
-     -      [ el | NodeElement el <- map node nds ]
-     -}
     io $ makePage volName pageName nds
