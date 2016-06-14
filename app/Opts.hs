@@ -47,7 +47,8 @@ scrapeOpts =
                      <> value TargetNone
                      <> help "How to handle the metadata. This is one of\
                              \ 'none' (none), 'yaml' (YAML header),\
-                             \ 'json' (JSON side file).")
+                             \ 'json' (JSON side file), 'csv' (CSV side\
+                             \ file including content).")
     <*> strOption (  short 'o' <> long "output" <> metavar "DIRNAME"
                   <> help "The directory to put the scraped documents into.")
 
@@ -70,7 +71,8 @@ pageOpts
                      <> value TargetNone
                      <> help "How to handle the metadata. This is one of\
                              \ 'none' (none), 'yaml' (YAML header),\
-                             \ 'json' (JSON side file).")
+                             \ 'json' (JSON side file), 'csv' (CSV side\
+                             \ file including content).")
     <*> strOption (  short 'o' <> long "output" <> metavar "DIRNAME"
                   <> help "The directory to put the scraped documents into.")
 
@@ -79,6 +81,7 @@ mtVal = fmap (fmap toLower) str >>= \case
         'n':_ -> return TargetNone
         'y':_ -> return TargetYamlHeader
         'j':_ -> return TargetJSON
+        'c':_ -> return TargetCSV
         e     -> fail $ "Invalid metadata target: '" ++ e ++ "'."
 
 opts' :: Parser Actions

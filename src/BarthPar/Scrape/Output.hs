@@ -103,23 +103,27 @@ writeOutput Output{..} = do
                                        >> hPutStrLn h "\n---\n\n"
                    TargetJSON -> BL.writeFile (_outputFilePath -<.> "json")
                                  $ A.encode _outputMetadata
+                   TargetCSV  -> return ()
                  TLIO.hPutStr h (toLazyText _outputContent)
 
-writePage :: FilePath -> Page -> Scrape ()
+writePage :: FilePath -> Page -> Scrape [SectionPage]
 writePage dirname page@Page{..} = do
   let pageMeta = M.singleton "page" . Object $ asMetadata page
+      pageFile = dirname </> makeFileName _pageVolumeId (0 :: Int) 0
+      sp       = SectionPage page Nothing pageFile
   writeOutput $ Output
-                  (dirname </> makeFileName _pageVolumeId (0 :: Int) 0)
+                  pageFile
                   pageMeta
                   (build page)
-  forM_ _pageContent $ \s@Section{_sectionN, _sectionHead} ->
+  fmap (sp:) . forM _pageContent $ \s@Section{_sectionN, _sectionHead} -> do
       let n        = _sectionN
           filename = dirname
                      </> makeFileName _pageVolumeId (maybe 0 fst _sectionHead) n
           metadata = M.insert "paragraph" (toJSON n)
                      . M.insert "section" (Object $ asMetadata s)
                      $ pageMeta
-      in  writeOutput . Output filename metadata $ build s
+      writeOutput . Output filename metadata $ build s
+      return $ SectionPage page (Just s) filename
     where
       makeFileName :: Buildable s => VolumeID -> s -> Int -> FilePath
       makeFileName (Volume a b p) section n =

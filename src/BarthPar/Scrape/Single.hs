@@ -2,6 +2,7 @@ module BarthPar.Scrape.Single where
 
 
 import           Control.Error
+import           Control.Monad          (void)
 import qualified Data.Text              as T
 
 import           BarthPar.Scrape        (scrapePage)
@@ -13,4 +14,4 @@ scrapeSingle :: FilePath -> VolumeTitle -> T.Text -> MetadataTarget -> FilePath
              -> Script ()
 scrapeSingle inputFile vTitle pageTitle meta outputDir =
     toScript True meta $
-        writePage outputDir =<< scrapePage vTitle pageTitle (Left inputFile)
+        void . writePage outputDir =<< scrapePage vTitle pageTitle (Left inputFile)

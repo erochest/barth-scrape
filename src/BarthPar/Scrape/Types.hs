@@ -11,17 +11,23 @@
 module BarthPar.Scrape.Types where
 
 
+import           Control.Arrow          ((&&&))
 import           Control.DeepSeq
 import           Control.Error
 import           Control.Lens           hiding ((.=))
 import           Control.Monad.Reader
+import qualified Data.ByteString        as B
+import           Data.Csv
 import           Data.Data
 import qualified Data.HashMap.Strict    as M
 import           Data.Monoid
+import           Data.Ord
 import qualified Data.Text              as T
 import           Data.Text.Buildable
+import           Data.Text.Encoding
+import qualified Data.Text.Lazy         as TL
 import           Data.Text.Lazy.Builder
-import           Data.Yaml
+import           Data.Yaml              hiding ((.=))
 import           GHC.Generics
 import           Network.URI
 import           Text.Numeral.Roman
@@ -29,6 +35,7 @@ import qualified Text.XML               as XML
 import           Text.XML.Lens          hiding ((.=))
 
 import           BarthPar.Scrape.XML    (buildText)
+import           BarthPar.Utils
 
 
 buildElement :: Element -> Builder
@@ -47,6 +54,7 @@ data MetadataTarget
     = TargetNone
     | TargetYamlHeader
     | TargetJSON
+    | TargetCSV
     deriving (Show, Eq, Ord, Enum, Bounded, Data, Typeable, Generic)
 $(makePrisms ''MetadataTarget)
 
@@ -93,7 +101,7 @@ data VolumeID
       , _volumeSection :: !Int
       }
     | Appendix { _appendixNumber :: !Int }
-    deriving (Show, Eq, Data, Typeable, Generic)
+    deriving (Show, Eq, Ord, Data, Typeable, Generic)
 $(makePrisms ''VolumeID)
 $(makeLenses ''VolumeID)
 
@@ -126,6 +134,9 @@ data Section
     } deriving (Show, Eq, Data, Typeable, Generic)
 $(makeLenses ''Section)
 
+instance Ord Section where
+    compare = comparing _sectionN
+
 instance NFData Section
 
 instance Buildable Section where
@@ -143,7 +154,6 @@ instance Metadata Section where
                          )
                  . _sectionHead
 
--- TODO: Add input page
 data Page
     = Page
     { _pageVolumeId    :: !VolumeID
@@ -152,7 +162,9 @@ data Page
     , _pageContent     :: ![Section]
     } deriving (Show, Eq, Data, Typeable, Generic)
 $(makeLenses ''Page)
-$(makePrisms ''Page)
+
+instance Ord Page where
+    compare = comparing _pageVolumeId
 
 instance NFData Page
 
@@ -162,6 +174,65 @@ instance Buildable Page where
 instance Metadata Page where
     asMetadata Page{..} =
         M.insert "title" (toJSON _pageVolumeTitle) $ asMetadata _pageVolumeId
+
+data SectionPage
+    = SectionPage
+    { _spPage     :: !Page
+    , _spSection  :: !(Maybe Section)
+    , _spFilePath :: !FilePath
+    } deriving (Show, Eq, Data, Typeable, Generic)
+$(makeLenses ''SectionPage)
+
+instance Ord SectionPage where
+    compare = comparing (_spPage &&& _spSection)
+
+instance NFData SectionPage
+
+instance Metadata SectionPage where
+    asMetadata SectionPage{..} =  asMetadata _spPage
+                               <> foldMap asMetadata _spSection
+
+instance ToNamedRecord SectionPage where
+    toNamedRecord sp =
+        namedRecord [ "filename"      .= encodeUtf8 (T.pack $ sp ^. spFilePath)
+                    , "page_title"    .= lu "title"   pmeta
+                    , "volume"        .= lu "volume"  pmeta
+                    , "section"       .= lu "section" pmeta
+                    , "page"          .= lu "page"    pmeta
+                    , "section_title" .= lu "title"   smeta
+                    , "text"          .= content
+                    ]
+        where
+            lu :: T.Text -> Object -> B.ByteString
+            lu k = maybe "" value . M.lookup k
+
+            value :: Value -> B.ByteString
+            value (Object o) = bshow o
+            value (Array  a) = bshow a
+            value (String t) = encodeUtf8 t
+            value (Number n) = bshow (floor n :: Int)
+            value (Bool   b) = bshow b
+            value Null       = ""
+
+            bshow :: Show a => a -> B.ByteString
+            bshow = encodeUtf8 . T.pack . show
+
+            pmeta = asMetadata $ sp ^. spPage
+            smeta = foldMap asMetadata $ sp ^. spSection
+
+            content = encodeUtf8 . normalize . TL.toStrict . toLazyText
+                    . maybe (build $ sp ^. spPage) build
+                    $ sp ^. spSection
+
+instance DefaultOrdered SectionPage where
+    headerOrder _ = [ "filename"
+                    , "volume"
+                    , "page"
+                    , "page_title"
+                    , "section"
+                    , "section_title"
+                    , "text"
+                    ]
 
 data Output
     = Output

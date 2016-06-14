@@ -8,12 +8,15 @@ module BarthPar.Scrape where
 
 import           Control.Error
 import           Control.Monad
+import qualified Data.ByteString.Lazy    as BL
+import           Data.Csv
+import qualified Data.List               as L
 import           Data.Monoid
 import qualified Data.Text               as T
 import           Network.URI
 import           Prelude                 hiding (div)
+import           System.FilePath
 import           System.IO
--- import           Text.XML                (Node (..))
 import           Text.XML.Cursor
 
 import           BarthPar.Scrape.Network
@@ -33,7 +36,14 @@ scrape debug clean mdata outputDir inputRoot = toScript debug mdata $ do
              Right (Just uri) -> return $ Right uri
              Left filePath    -> return $ Left filePath
              Right Nothing    -> throwS "Invalid root URL."
-  scrapeTOC input >>= mapM_ (writePage outputDir)
+  pages <- mapM (writePage outputDir) =<< scrapeTOC input
+  -- TODO: refactor this and share with Single.hs
+  when (mdata == TargetCSV) $
+    let csvFile = outputDir </> "corpus.csv"
+    in  scrapeIO . BL.writeFile csvFile
+                 . encodeDefaultOrderedByName
+                 . L.sort
+                 $ concat pages
 
 scrapeTOC :: InputSource -> Scrape [Page]
 scrapeTOC input =

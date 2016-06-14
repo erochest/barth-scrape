@@ -28,6 +28,7 @@ import           Text.XML.Lens          hiding (attributeIs, (<|))
 import           BarthPar.Scrape.Types
 import           BarthPar.Scrape.Utils
 import           BarthPar.Scrape.XML
+import           BarthPar.Utils
 
 
 parseVolumeID :: VolumeTitle -> T.Text -> PureScript VolumeID

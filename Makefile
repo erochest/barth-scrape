@@ -36,13 +36,13 @@ open:
 run: build
 	rm -f dump/*
 	stack exec -- barth-par scrape --clean --output output/ \
-		--debug \
-		--root-file $(URL) --metadata yaml
+		--root-file $(URL) --metadata csv
+		# --debug \
 
 single/run.out: build
 	stack exec -- barth-par page \
 		--input    /Users/err8n/c/solomon.dkbl.alexanderstreet.com/cgi-bin/asp/philo/dkbl/getobject.pl?c.830:1.barth.html \
-		--metadata yaml    \
+		--metadata csv     \
 		--output   single/ \
 		&> single/run.out
 

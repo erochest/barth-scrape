@@ -1,3 +1,5 @@
+
+
 module BarthPar.Scrape.Utils where
 
 
@@ -82,5 +84,5 @@ debugging' a s = do
   then s
   else return a
 
-normalize :: T.Text -> T.Text
-normalize = T.unwords . T.words
+flattenSections :: Page -> FilePath -> [SectionPage]
+flattenSections p fp = fmap (flip (SectionPage p) fp . Just) $ p ^. pageContent

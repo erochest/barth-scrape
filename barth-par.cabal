@@ -57,6 +57,7 @@ library
                      , network-uri
                      , parallel
                      , roman-numerals
+                     , scientific
                      , tagsoup
                      , text
                      , text-format
