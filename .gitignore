@@ -23,3 +23,5 @@ dump/
 output/
 lists/
 single/
+*.tar.*
+*.out
