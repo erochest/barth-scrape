@@ -8,9 +8,6 @@ module BarthPar.Scrape where
 
 import           Control.Error
 import           Control.Monad
-import qualified Data.ByteString.Lazy    as BL
-import           Data.Csv
-import qualified Data.List               as L
 import           Data.Monoid
 import qualified Data.Text               as T
 import           Network.URI
@@ -37,13 +34,8 @@ scrape debug clean mdata outputDir inputRoot = toScript debug mdata $ do
              Left filePath    -> return $ Left filePath
              Right Nothing    -> throwS "Invalid root URL."
   pages <- mapM (writePage outputDir) =<< scrapeTOC input
-  -- TODO: refactor this and share with Single.hs
   when (mdata == TargetCSV) $
-    let csvFile = outputDir </> "corpus.csv"
-    in  scrapeIO . BL.writeFile csvFile
-                 . encodeDefaultOrderedByName
-                 . L.sort
-                 $ concat pages
+    writeCsv (outputDir </> "corpus.csv") $ concat pages
 
 scrapeTOC :: InputSource -> Scrape [Page]
 scrapeTOC input =

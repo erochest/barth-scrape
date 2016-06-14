@@ -2,8 +2,9 @@ module BarthPar.Scrape.Single where
 
 
 import           Control.Error
-import           Control.Monad          (void)
+import           Control.Monad
 import qualified Data.Text              as T
+import           System.FilePath
 
 import           BarthPar.Scrape        (scrapePage)
 import           BarthPar.Scrape.Output
@@ -14,4 +15,6 @@ scrapeSingle :: FilePath -> VolumeTitle -> T.Text -> MetadataTarget -> FilePath
              -> Script ()
 scrapeSingle inputFile vTitle pageTitle meta outputDir =
     toScript True meta $
-        void . writePage outputDir =<< scrapePage vTitle pageTitle (Left inputFile)
+        when (meta == TargetCSV) . writeCsv (outputDir </> "corpus.csv")
+            =<< writePage outputDir
+            =<< scrapePage vTitle pageTitle (Left inputFile)

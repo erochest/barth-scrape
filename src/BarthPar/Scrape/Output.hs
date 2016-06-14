@@ -11,7 +11,9 @@ import           Control.Monad
 import qualified Data.Aeson             as A
 import qualified Data.ByteString        as B
 import qualified Data.ByteString.Lazy   as BL
+import           Data.Csv               hiding (Only, encode)
 import qualified Data.HashMap.Strict    as M
+import qualified Data.List              as L
 import qualified Data.Text              as T
 import           Data.Text.Buildable
 import           Data.Text.Format       hiding (build)
@@ -170,3 +172,9 @@ writePairs filename = scrapeIO
                       . TIO.writeFile filename
                       . T.unlines
                       . map (\(a, b) -> T.concat [a, "\t", b])
+
+writeCsv :: FilePath -> [SectionPage] -> Scrape ()
+writeCsv csvFilePath sPages =
+    scrapeIO . BL.writeFile csvFilePath
+             . encodeDefaultOrderedByName
+             $ L.sort sPages
