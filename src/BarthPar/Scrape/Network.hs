@@ -28,28 +28,30 @@ import           BarthPar.XML
 
 dl :: Maybe T.Text -> InputSource -> Scrape XML.Document
 dl title (Right rootUrl) = do
-    scrapeIO . hPutStrLn stderr
-             . ("DOWNLOAD: " ++)
-             $ maybe ("<" ++ uri ++ ">") ( (++ ")")
-                                         . (++ uri)
-                                         . ("[" ++)
-                                         . (++ "](")
-                                         . T.unpack
-                                         ) title
+    debugging $
+        scrapeIO . hPutStrLn stderr
+                 . ("DOWNLOAD: " ++)
+                 $ maybe ("<" ++ uri ++ ">") ( (++ ")")
+                                             . (++ uri)
+                                             . ("[" ++)
+                                             . (++ "](")
+                                             . T.unpack
+                                             ) title
     unnest . parseTags . decodeUtf8 . B.toStrict . view responseBody
            <$> scrapeIO (get uri)
     where
         uri = show rootUrl
 
 dl title (Left filePath) = do
-    scrapeIO . hPutStrLn stderr
-             . ("READ: " ++)
-             $ maybe ("<" ++ filePath ++ ">") ( (++ ")")
-                                              . (++ filePath)
-                                              . ("[" ++)
-                                              . (++ "](")
-                                              . T.unpack
-                                              ) title
+    debugging $
+        scrapeIO . hPutStrLn stderr
+                 . ("READ: " ++)
+                 $ maybe ("<" ++ filePath ++ ">") ( (++ ")")
+                                                  . (++ filePath)
+                                                  . ("[" ++)
+                                                  . (++ "](")
+                                                  . T.unpack
+                                                  ) title
     unnest . parseTags <$> scrapeIO (TIO.readFile filePath)
 
 appendInput :: InputSource -> T.Text -> Maybe InputSource
