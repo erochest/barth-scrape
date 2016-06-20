@@ -74,8 +74,8 @@ makePage :: VolumeTitle -> T.Text -> [Cursor] -> PureScript Page
 makePage vtitle pageName (h:a:cs) =
     Page <$> first ("Error parsing volume ID: " ++)
          (   parseVolumeID vtitle pageName)
-         <*> forceM "Missing VolumeTitle"
-         (  h $// (spanHead >=> child      >=> content))
+         <*> (normalize <$> forceM "Missing VolumeTitle"
+         (  h $// (spanHead >=> child >=> content)))
          <*> forceM "Missing Abstract" a'
          <*> readChildSections cs'
     where
@@ -100,7 +100,7 @@ makePage vtitle pageName _ =
 readSectionHead :: Cursor -> PureScript SectionHeader
 readSectionHead c = fmap swap
                     . sequenceA
-                    . (T.drop 2 `bimap` anyNumberPS)
+                    . ((normalize . T.drop 2) `bimap` anyNumberPS)
                     . swap
                     . T.break (=='.')
                     . T.concat
