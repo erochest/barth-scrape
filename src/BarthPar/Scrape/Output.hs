@@ -55,8 +55,8 @@ cleanOutputs outputDir = do
                                  removeDirectoryRecursive dirname
                             createDirectoryIfMissing True dirname
 
-dumpPage :: String -> XML.Document -> Scrape (String, XML.Document)
-dumpPage source doc = debugging' ("", doc) $ do
+dumpPage :: String -> XML.Document -> Scrape (Maybe String, XML.Document)
+dumpPage source doc = debugging' (Nothing, doc) $ do
   filename <- findFileName "dump/{}-page.html" 0
   scrapeIO $ withFile filename WriteMode $ \f -> do
                      TIO.hPutStrLn f "<!--"
@@ -66,7 +66,7 @@ dumpPage source doc = debugging' ("", doc) $ do
                             $ XML.renderText (XML.def
                                              { rsPretty = True
                                              }) doc
-  return (filename, doc)
+  return (Just filename, doc)
 
 dumpPrint :: Show a => String -> a -> Scrape a
 dumpPrint source x = debugging' x $ do

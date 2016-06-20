@@ -65,7 +65,7 @@ scrapeVolumePage volName input =
 scrapePage :: VolumeTitle -> T.Text -> InputSource -> Scrape Page
 scrapePage volName pageName input = do
     doc <- dl (Just $ "PAGE: " <> volName <> " | " <> pageName) input
-    (dumpFile, _) <- dumpPage "page" doc
-    scrapeIO . hPutStrLn stderr $ ">>> " ++ dumpFile
+    dumpPage "page" doc
+        >>= scrapeIO . maybe (return ()) (hPutStrLn stderr . (">>> " ++)) . fst
     let nds = fromDocument doc $// tinyurl >=> followingSibling >=> div
     io $ makePage volName pageName nds
