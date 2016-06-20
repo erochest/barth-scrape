@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 
 
 module BarthPar.Scrape.Utils where
@@ -8,7 +9,9 @@ import           Control.Error
 import           Control.Lens
 import           Control.Monad.Reader
 import           Data.Foldable
-import qualified Data.Text             as T
+import qualified Data.Text              as T
+import           Data.Text.Format       as F
+import qualified Data.Text.Lazy         as TL
 import           Data.Text.Read
 import           Debug.Trace
 import           Text.Groom
@@ -86,3 +89,9 @@ debugging' a s = do
 
 flattenSections :: Page -> FilePath -> [SectionPage]
 flattenSections p fp = fmap (flip (SectionPage p) fp . Just) $ p ^. pageContent
+
+mdLink :: T.Text -> String -> T.Text
+mdLink title uri = TL.toStrict $ F.format "[{}]({})" (title, uri)
+
+mdLink' :: T.Text -> String -> String
+mdLink' text = T.unpack . mdLink text

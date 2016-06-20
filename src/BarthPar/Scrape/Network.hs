@@ -22,34 +22,27 @@ import           Text.HTML.TagSoup
 import qualified Text.XML              as XML
 
 import           BarthPar.Scrape.Types
+import           BarthPar.Scrape.Utils
 import           BarthPar.XML
 
 
 dl :: Maybe T.Text -> InputSource -> Scrape XML.Document
 dl title (Right rootUrl) = do
-  scrapeIO . hPutStrLn stderr
-               . ("DOWNLOAD: " ++)
-               $ maybe ("<" ++ uri ++ ">") ( (++ ")")
-                                           . (++ uri)
-                                           . ("[" ++)
-                                           . (++ "](")
-                                           . T.unpack
-                                           ) title
-  unnest . parseTags . decodeUtf8 . B.toStrict . view responseBody
-                 <$> scrapeIO (get uri)
+    debugging $
+        scrapeIO . hPutStrLn stderr
+                 . ("DOWNLOAD: " ++)
+                 $ maybe ("<" ++ uri ++ ">") (`mdLink'` uri) title
+    unnest . parseTags . decodeUtf8 . B.toStrict . view responseBody
+           <$> scrapeIO (get uri)
     where
-      uri = show rootUrl
+        uri = show rootUrl
 
 dl title (Left filePath) = do
-  scrapeIO . hPutStrLn stderr
-               . ("READ: " ++)
-               $ maybe ("<" ++ filePath ++ ">") ( (++ ")")
-                                                . (++ filePath)
-                                                . ("[" ++)
-                                                . (++ "](")
-                                                . T.unpack
-                                                ) title
-  unnest . parseTags <$> scrapeIO (TIO.readFile filePath)
+    debugging $
+        scrapeIO . hPutStrLn stderr
+                 . ("READ: " ++)
+                 $ maybe ("<" ++ filePath ++ ">") (`mdLink'` filePath) title
+    unnest . parseTags <$> scrapeIO (TIO.readFile filePath)
 
 appendInput :: InputSource -> T.Text -> Maybe InputSource
 appendInput (Right uri)     app = Right <$> appendUri uri app
