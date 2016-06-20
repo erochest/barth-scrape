@@ -24,9 +24,14 @@ import           BarthPar.Scrape.Utils
 import           BarthPar.Scrape.XML
 
 
-scrape :: Bool -> Bool -> MetadataTarget -> FilePath -> Either FilePath String
+scrape :: Bool                      -- ^ Print debugging output?
+       -> Bool                      -- ^ Clean out the output directory first?
+       -> MetadataTarget            -- ^ How to output the metadata.
+       -> Chunking                  -- ^ How to chunk the output.
+       -> FilePath                  -- ^ The output directory.
+       -> Either FilePath String    -- ^ The input.
        -> Script ()
-scrape debug clean mdata outputDir inputRoot = toScript debug mdata $ do
+scrape debug clean mdata _chunking outputDir inputRoot = toScript debug mdata $ do
   when clean $
        cleanOutputs outputDir
   input <- case fmap parseURI inputRoot of

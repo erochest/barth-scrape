@@ -9,6 +9,7 @@ import           Control.Error
 import           Data.Char
 import qualified Data.Text             as T
 import           Options.Applicative   hiding ((<$>), (<*>))
+import           Text.Read             (readMaybe)
 
 import           BarthPar.Scrape.Types hiding (Scrape)
 import           BarthPar.Types
@@ -49,6 +50,14 @@ scrapeOpts =
                              \ 'none' (none), 'yaml' (YAML header),\
                              \ 'json' (JSON side file), 'csv' (CSV side\
                              \ file including content).")
+    <*> option chunkVal (  short 'c' <> long "chunking" <> metavar "CHUNKING"
+                        <> value SectionChunks
+                        <> help "How to chunk the input documents in the \
+                                \output. This can be 'volume'; 'part'; \
+                                \'chapter'; 'paragraph'; 'section' (by \
+                                \punctuated-paragraph and excursus); or a \
+                                \number for chunks within a paragraph for a \
+                                \given size. Default is by section.")
     <*> strOption (  short 'o' <> long "output" <> metavar "DIRNAME"
                   <> help "The directory to put the scraped documents into.")
 
@@ -73,6 +82,14 @@ pageOpts
                              \ 'none' (none), 'yaml' (YAML header),\
                              \ 'json' (JSON side file), 'csv' (CSV side\
                              \ file including content).")
+    <*> option chunkVal (  short 'c' <> long "chunking" <> metavar "CHUNKING"
+                        <> value SectionChunks
+                        <> help "How to chunk the input documents in the \
+                                \output. This can be 'volume'; 'part'; \
+                                \'chapter'; 'paragraph'; 'section' (by \
+                                \punctuated-paragraph and excursus); or a \
+                                \number for chunks within a paragraph for a \
+                                \given size. Default is by section.")
     <*> strOption (  short 'o' <> long "output" <> metavar "DIRNAME"
                   <> help "The directory to put the scraped documents into.")
 
@@ -83,6 +100,20 @@ mtVal = fmap (fmap toLower) str >>= \case
         'j':_ -> return TargetJSON
         'c':_ -> return TargetCSV
         e     -> fail $ "Invalid metadata target: '" ++ e ++ "'."
+
+chunkVal :: ReadM Chunking
+chunkVal = fmap (fmap toLower) str >>= chunk
+    where
+        chunk :: String -> ReadM Chunking
+        chunk ('v':_) = return VolumeChunks
+        chunk "part"  = return PartChunks
+        chunk ('c':_) = return ChapterChunks
+        chunk ('p':_) = return ParagraphChunks
+        chunk ('s':_) = return SectionChunks
+        chunk input | all isDigit input = maybe fail' (return . SizedChunks) $ readMaybe input
+                    | otherwise         = fail'
+                    where
+                        fail' = fail $ "Invalid chunking: '" ++ input ++ "'."
 
 opts' :: Parser Actions
 opts' = subparser

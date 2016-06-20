@@ -60,6 +60,19 @@ $(makePrisms ''MetadataTarget)
 
 instance NFData MetadataTarget
 
+data Chunking
+    = VolumeChunks      -- ^ CD I
+    | PartChunks        -- ^ CD I.1
+    | ChapterChunks     -- ^ CD I.1.§§
+    | ParagraphChunks   -- ^ CD I.1.§
+    | SectionChunks     -- ^ CD I.1.§.N
+    | SizedChunks       { _chunkSize :: !Int }
+    deriving (Show, Eq, Data, Typeable, Generic)
+$(makePrisms ''Chunking)
+$(makeLenses ''Chunking)
+
+instance NFData Chunking
+
 data ScrapeState
     = ScrapeState
     { _scrapeDebugging :: !Bool
