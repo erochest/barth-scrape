@@ -31,12 +31,7 @@ dl title (Right rootUrl) = do
     debugging $
         scrapeIO . hPutStrLn stderr
                  . ("DOWNLOAD: " ++)
-                 $ maybe ("<" ++ uri ++ ">") ( (++ ")")
-                                             . (++ uri)
-                                             . ("[" ++)
-                                             . (++ "](")
-                                             . T.unpack
-                                             ) title
+                 $ maybe ("<" ++ uri ++ ">") (`mdLink'` uri) title
     unnest . parseTags . decodeUtf8 . B.toStrict . view responseBody
            <$> scrapeIO (get uri)
     where
@@ -46,12 +41,7 @@ dl title (Left filePath) = do
     debugging $
         scrapeIO . hPutStrLn stderr
                  . ("READ: " ++)
-                 $ maybe ("<" ++ filePath ++ ">") ( (++ ")")
-                                                  . (++ filePath)
-                                                  . ("[" ++)
-                                                  . (++ "](")
-                                                  . T.unpack
-                                                  ) title
+                 $ maybe ("<" ++ filePath ++ ">") (`mdLink'` filePath) title
     unnest . parseTags <$> scrapeIO (TIO.readFile filePath)
 
 appendInput :: InputSource -> T.Text -> Maybe InputSource
