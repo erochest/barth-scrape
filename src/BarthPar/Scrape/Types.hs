@@ -194,13 +194,14 @@ instance Metadata SectionPage where
 
 instance ToNamedRecord SectionPage where
     toNamedRecord sp =
-        namedRecord [ "filename"      .= encodeUtf8 (T.pack $ sp ^. spFilePath)
-                    , "page_title"    .= lu "title"   pmeta
-                    , "volume"        .= lu "volume"  pmeta
-                    , "section"       .= lu "section" pmeta
-                    , "page"          .= lu "page"    pmeta
-                    , "section_title" .= lu "title"   smeta
-                    , "text"          .= content
+        namedRecord [ "filename"         .= encodeUtf8 (T.pack $ sp ^. spFilePath)
+                    , "page_title"       .= lu "title"   pmeta
+                    , "volume"           .= lu "volume"  pmeta
+                    , "section"          .= lu "section" pmeta
+                    , "page"             .= lu "page"    pmeta
+                    , "section_title"    .= lu "title"   smeta
+                    , "paragraph_number" .= lu "number"  smeta
+                    , "text"             .= content
                     ]
         where
             lu :: T.Text -> Object -> B.ByteString
@@ -231,6 +232,7 @@ instance DefaultOrdered SectionPage where
                     , "page_title"
                     , "section"
                     , "section_title"
+                    , "paragraph_number"
                     , "text"
                     ]
 
