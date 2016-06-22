@@ -22,6 +22,7 @@ library
                      , BarthPar.Lens
                      , BarthPar.Parallel
                      , BarthPar.Scrape
+                     , BarthPar.Scrape.Chunks
                      , BarthPar.Scrape.Network
                      , BarthPar.Scrape.Output
                      , BarthPar.Scrape.Read

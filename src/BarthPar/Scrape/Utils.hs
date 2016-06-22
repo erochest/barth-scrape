@@ -87,9 +87,6 @@ debugging' a s = do
   then s
   else return a
 
-flattenSections :: Page -> FilePath -> [SectionPage]
-flattenSections p fp = fmap (flip (SectionPage p) fp . Just) $ p ^. pageContent
-
 mdLink :: T.Text -> String -> T.Text
 mdLink title uri = TL.toStrict $ F.format "[{}]({})" (title, uri)
 

@@ -12,10 +12,7 @@ import qualified Data.Aeson             as A
 import qualified Data.ByteString        as B
 import qualified Data.ByteString.Lazy   as BL
 import           Data.Csv               hiding (Only, encode)
-import qualified Data.HashMap.Strict    as M
-import qualified Data.List              as L
 import qualified Data.Text              as T
-import           Data.Text.Buildable
 import           Data.Text.Format       hiding (build)
 import qualified Data.Text.IO           as TIO
 import qualified Data.Text.Lazy         as TL
@@ -94,10 +91,10 @@ dumpEl source e = debugging' e $ do
     void . dumpPage source $ XML.Document (XML.Prologue [] Nothing []) e []
     return e
 
-writeOutput :: Output -> Scrape ()
-writeOutput Output{..} = do
+writeOutput :: FilePath -> Output -> Scrape ()
+writeOutput outputDir Output{..} = do
   mdTarget <- view scrapeMetadata
-  scrapeIO . withFile _outputFilePath WriteMode $
+  scrapeIO . withFile (outputDir </> _outputFilePath) WriteMode $
                \h -> do
                  case mdTarget of
                    TargetNone -> return ()
@@ -107,47 +104,6 @@ writeOutput Output{..} = do
                                  $ A.encode _outputMetadata
                    TargetCSV  -> return ()
                  TLIO.hPutStr h (toLazyText _outputContent)
-
-writePage :: FilePath -> Page -> Scrape [SectionPage]
-writePage dirname page@Page{..} = do
-  let pageMeta = M.singleton "page" . Object $ asMetadata page
-      pageFile = dirname </> makeFileName _pageVolumeId (0 :: Int) 0
-      sp       = SectionPage page Nothing pageFile
-  writeOutput $ Output
-                  pageFile
-                  pageMeta
-                  (build page)
-  fmap (sp:) . forM _pageContent $ \s@Section{_sectionN, _sectionHead} -> do
-      let n        = _sectionN
-          filename = dirname
-                     </> makeFileName _pageVolumeId (maybe 0 fst _sectionHead) n
-          metadata = M.insert "paragraph" (toJSON n)
-                     . M.insert "section" (Object $ asMetadata s)
-                     $ pageMeta
-      writeOutput . Output filename metadata $ build s
-      return $ SectionPage page (Just s) filename
-    where
-      makeFileName :: Buildable s => VolumeID -> s -> Int -> FilePath
-      makeFileName (Volume a b p) section n =
-          T.unpack
-               . TL.toStrict
-               $ format "barth-{}-{}-{}-{}-{}.md"
-                     ( left 2 '0' a
-                     , left 2 '0' b
-                     , left 2 '0' p
-                     , left 2 '0' section
-                     , left 3 '0' n
-                     )
-      makeFileName (Appendix a) section n =
-          T.unpack
-               . TL.toStrict
-               $ format "barth-{}-{}-{}-{}-{}.md"
-                     ( "XX" :: T.Text
-                     , left 2 '0' a
-                     , left 2 '0' (0 :: Int)
-                     , left 2 '0' section
-                     , left 3 '0' n
-                     )
 
 wrapNodes :: [XML.Node] -> XML.Document
 wrapNodes nds =
@@ -173,8 +129,10 @@ writePairs filename = scrapeIO
                       . T.unlines
                       . map (\(a, b) -> T.concat [a, "\t", b])
 
-writeCsv :: FilePath -> [SectionPage] -> Scrape ()
-writeCsv csvFilePath sPages =
-    scrapeIO . BL.writeFile csvFilePath
-             . encodeDefaultOrderedByName
-             $ L.sort sPages
+writeCsv :: FilePath -> [CsvOutput] -> Scrape ()
+writeCsv csvFilePath cs@(c:_) =
+    scrapeIO
+        . BL.writeFile csvFilePath
+        . encodeByName (_csvHeader c)
+        $ map _csvRecord cs
+writeCsv _ [] = return ()

@@ -11,7 +11,7 @@ import qualified Data.Text             as T
 import           Options.Applicative   hiding ((<$>), (<*>))
 import           Text.Read             (readMaybe)
 
-import           BarthPar.Scrape.Types hiding (Scrape)
+import           BarthPar.Scrape.Types hiding (Scrape, chunk)
 import           BarthPar.Types
 
 
@@ -51,13 +51,13 @@ scrapeOpts =
                              \ 'json' (JSON side file), 'csv' (CSV side\
                              \ file including content).")
     <*> option chunkVal (  short 'c' <> long "chunking" <> metavar "CHUNKING"
-                        <> value SectionChunks
+                        <> value ParagraphChunks
                         <> help "How to chunk the input documents in the \
                                 \output. This can be 'volume'; 'part'; \
-                                \'chapter'; 'paragraph'; 'section' (by \
+                                \'chapter'; 'paragraph'; 'block' (by \
                                 \punctuated-paragraph and excursus); or a \
                                 \number for chunks within a paragraph for a \
-                                \given size. Default is by section.")
+                                \given size. Default is by paragraph.")
     <*> strOption (  short 'o' <> long "output" <> metavar "DIRNAME"
                   <> help "The directory to put the scraped documents into.")
 
@@ -83,13 +83,13 @@ pageOpts
                              \ 'json' (JSON side file), 'csv' (CSV side\
                              \ file including content).")
     <*> option chunkVal (  short 'c' <> long "chunking" <> metavar "CHUNKING"
-                        <> value SectionChunks
+                        <> value ParagraphChunks
                         <> help "How to chunk the input documents in the \
                                 \output. This can be 'volume'; 'part'; \
-                                \'chapter'; 'paragraph'; 'section' (by \
+                                \'chapter'; 'paragraph'; 'block' (by \
                                 \punctuated-paragraph and excursus); or a \
                                 \number for chunks within a paragraph for a \
-                                \given size. Default is by section.")
+                                \given size. Default is by paragraph.")
     <*> strOption (  short 'o' <> long "output" <> metavar "DIRNAME"
                   <> help "The directory to put the scraped documents into.")
 
@@ -109,7 +109,7 @@ chunkVal = fmap (fmap toLower) str >>= chunk
         chunk "part"  = return PartChunks
         chunk ('c':_) = return ChapterChunks
         chunk ('p':_) = return ParagraphChunks
-        chunk ('s':_) = return SectionChunks
+        chunk ('b':_) = return BlockChunks
         chunk input | all isDigit input = maybe fail' (return . SizedChunks) $ readMaybe input
                     | otherwise         = fail'
                     where

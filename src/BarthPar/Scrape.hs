@@ -13,14 +13,12 @@ import qualified Data.Text               as T
 import           Network.URI
 import           Prelude                 hiding (div)
 import           System.FilePath
-import           System.IO
 import           Text.XML.Cursor
 
+import qualified BarthPar.Scrape.Chunks  as Chunks
 import           BarthPar.Scrape.Network
 import           BarthPar.Scrape.Output
-import           BarthPar.Scrape.Read
 import           BarthPar.Scrape.Types
-import           BarthPar.Scrape.Utils
 import           BarthPar.Scrape.XML
 
 
@@ -31,21 +29,24 @@ scrape :: Bool                      -- ^ Print debugging output?
        -> FilePath                  -- ^ The output directory.
        -> Either FilePath String    -- ^ The input.
        -> Script ()
-scrape debug clean mdata _chunking outputDir inputRoot = toScript debug mdata $ do
+scrape debug clean mdata chunkings outputDir inputRoot = toScript debug mdata $ do
   when clean $
        cleanOutputs outputDir
   input <- case fmap parseURI inputRoot of
              Right (Just uri) -> return $ Right uri
              Left filePath    -> return $ Left filePath
              Right Nothing    -> throwS "Invalid root URL."
-  pages <- mapM (writePage outputDir) =<< scrapeTOC input
+  outputs <- Chunks.chunk chunkings mdata <$> scrapeTOC input
+  mapM_ (writeOutput outputDir) outputs
   when (mdata == TargetCSV) $
-    writeCsv (outputDir </> "corpus.csv") $ concat pages
+    writeCsv (outputDir </> "corpus.csv") $ mapMaybe _outputCsv outputs
 
-scrapeTOC :: InputSource -> Scrape [Page]
-scrapeTOC input =
-    fmap concat . smapConcurrently (uncurry scrapeVolumePage)
-        =<< scrapeTOCPage input "Table of Contents" (T.isPrefixOf "CD ")
+scrapeTOC :: InputSource -> Scrape (Corpus ContentBlock)
+scrapeTOC _input = undefined
+    {-
+     - fmap concat . smapConcurrently (uncurry scrapeVolumePage)
+     -     =<< scrapeTOCPage input "Table of Contents" (T.isPrefixOf "CD ")
+     -}
 
 scrapeTOCPage :: InputSource
               -- ^ The ToC's URI to download
@@ -62,15 +63,19 @@ scrapeTOCPage input title f =
                  . fromDocument
                  <$> dl (Just $ "TOC: " <> title) input
 
-scrapeVolumePage :: T.Text -> InputSource -> Scrape [Page]
-scrapeVolumePage volName input =
-    smapConcurrently (uncurry (scrapePage volName))
-        =<< scrapeTOCPage input "View Text" (T.isPrefixOf "§ ")
+scrapeVolumePage :: T.Text -> InputSource -> Scrape [Volume ContentBlock]
+scrapeVolumePage _volName _input = undefined
+    {-
+     - smapConcurrently (uncurry (scrapePage volName))
+     -     =<< scrapeTOCPage input "View Text" (T.isPrefixOf "§ ")
+     -}
 
-scrapePage :: VolumeTitle -> T.Text -> InputSource -> Scrape Page
-scrapePage volName pageName input = do
-    doc <- dl (Just $ "PAGE: " <> volName <> " | " <> pageName) input
-    dumpPage "page" doc
-        >>= scrapeIO . maybe (return ()) (hPutStrLn stderr . (">>> " ++)) . fst
-    let nds = fromDocument doc $// tinyurl >=> followingSibling >=> div
-    io $ makePage volName pageName nds
+scrapePage :: Title -> T.Text -> InputSource -> Scrape (Chapter ContentBlock)
+scrapePage _volName _pageName _input = undefined
+    {-
+     - doc <- dl (Just $ "PAGE: " <> volName <> " | " <> pageName) input
+     - dumpPage "page" doc
+     -     >>= scrapeIO . maybe (return ()) (hPutStrLn stderr . (">>> " ++)) . fst
+     - let nds = fromDocument doc $// tinyurl >=> followingSibling >=> div
+     - io $ makePage volName pageName nds
+     -}
