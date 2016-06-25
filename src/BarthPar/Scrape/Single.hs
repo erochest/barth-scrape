@@ -21,11 +21,12 @@ scrapeSingle :: FilePath        -- ^ The input file.
              -> Script ()
 scrapeSingle inputFile vTitle pageTitle meta chunkings outputDir =
     toScript True meta $ do
-        outputs <-  Chunks.chunk chunkings meta . wrapCorpus
+        outputs <-  Chunks.chunk chunkings meta . wrapCorpus vTitle
                 <$> scrapePage vTitle pageTitle (Left inputFile)
         mapM_ (writeOutput outputDir) outputs
         when (meta == TargetCSV) $
             writeCsv (outputDir </> "corpus.csv") $ mapMaybe _outputCsv outputs
 
-wrapCorpus :: Chapter a -> Corpus a
-wrapCorpus = undefined
+wrapCorpus :: Title -> Chapter a -> Corpus a
+wrapCorpus vTitle =
+    Corpus . pure . Volume 1 vTitle . pure . Part (Header 1  vTitle) 1 . pure

@@ -11,7 +11,7 @@ import qualified Data.Text             as T
 import           Options.Applicative   hiding ((<$>), (<*>))
 import           Text.Read             (readMaybe)
 
-import           BarthPar.Scrape.Types hiding (Scrape, chunk)
+import           BarthPar.Scrape.Types hiding (Scrape, chunk, header)
 import           BarthPar.Types
 
 

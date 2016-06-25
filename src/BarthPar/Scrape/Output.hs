@@ -8,23 +8,23 @@ module BarthPar.Scrape.Output where
 
 import           Control.Lens
 import           Control.Monad
-import qualified Data.Aeson             as A
-import qualified Data.ByteString        as B
-import qualified Data.ByteString.Lazy   as BL
-import           Data.Csv               hiding (Only, encode)
-import qualified Data.Text              as T
-import           Data.Text.Format       hiding (build)
-import qualified Data.Text.IO           as TIO
-import qualified Data.Text.Lazy         as TL
+import qualified Data.Aeson              as A
+import qualified Data.ByteString.Char8   as B8
+import qualified Data.ByteString.Lazy    as BL
+import           Data.Csv                hiding (Only, encode)
+import qualified Data.Text               as T
+import           Data.Text.Format        hiding (build)
+import qualified Data.Text.IO            as TIO
+import qualified Data.Text.Lazy          as TL
 import           Data.Text.Lazy.Builder
-import qualified Data.Text.Lazy.IO      as TLIO
+import           Data.Text.Lazy.Encoding (encodeUtf8)
 import           Data.Yaml.Aeson
 import           System.Directory
 import           System.FilePath
 import           System.IO
 import           Text.Groom
 import           Text.XML
-import qualified Text.XML               as XML
+import qualified Text.XML                as XML
 
 import           BarthPar.Scrape.Types
 import           BarthPar.Scrape.Utils
@@ -98,12 +98,12 @@ writeOutput outputDir Output{..} = do
                \h -> do
                  case mdTarget of
                    TargetNone -> return ()
-                   TargetYamlHeader -> B.hPut h (encode _outputMetadata)
-                                       >> hPutStrLn h "\n---\n\n"
+                   TargetYamlHeader -> B8.hPut h (encode _outputMetadata)
+                                       >> B8.hPutStrLn h "\n---\n\n"
                    TargetJSON -> BL.writeFile (_outputFilePath -<.> "json")
                                  $ A.encode _outputMetadata
                    TargetCSV  -> return ()
-                 TLIO.hPutStr h (toLazyText _outputContent)
+                 B8.hPutStr h . BL.toStrict . encodeUtf8 $ toLazyText _outputContent
 
 wrapNodes :: [XML.Node] -> XML.Document
 wrapNodes nds =

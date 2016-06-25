@@ -9,9 +9,9 @@ import           Control.Error
 import           Control.Lens
 import           Control.Monad.Reader
 import           Data.Foldable
-import qualified Data.Text              as T
-import           Data.Text.Format       as F
-import qualified Data.Text.Lazy         as TL
+import qualified Data.Text             as T
+import           Data.Text.Format      as F
+import qualified Data.Text.Lazy        as TL
 import           Data.Text.Read
 import           Debug.Trace
 import           Text.Groom
@@ -54,6 +54,10 @@ forceM e xs = if x == mempty
                  else Right x
     where
         x = fold xs
+
+forceList :: String -> [a] -> PureScript [a]
+forceList e [] = Left e
+forceList _ xs = Right xs
 
 smapConcurrently :: Traversable t => (a -> Scrape b) -> t a -> Scrape (t b)
 -- smapConcurrently f = scriptIO . mapConcurrently (runScript . f)

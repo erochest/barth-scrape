@@ -20,8 +20,9 @@ import           Control.DeepSeq
 import           Control.Error
 import           Control.Lens           hiding ((.=))
 import           Control.Monad.Reader
-import           Data.Csv               hiding (Header)
-import qualified Data.Csv as Csv
+import qualified Data.Aeson             as A
+import           Data.Csv               hiding (HasHeader (..), Header, header)
+import qualified Data.Csv               as Csv
 import           Data.Data
 import           Data.Foldable
 import qualified Data.List              as L
@@ -64,7 +65,6 @@ left0 = (`F.left` '0')
 
 
 type Title       = T.Text
-type Header      = (Int, Title)
 type Content     = T.Text
 type MetaMap     = Object
 type PureScript  = Either String
@@ -79,10 +79,31 @@ class Titled a where
 class Filed a where
     getFilePath :: a -> FilePath
 
+data Header
+    = Header
+    { _headerN     :: !Int
+    , _headerTitle :: !Title
+    } deriving (Show, Eq, Data, Typeable, Generic)
+$(makeClassy ''Header)
+
+instance NFData Header
+
+instance Ord Header where
+    compare = comparing _headerN
+
+instance ToJSON Header where
+    toJSON (Header n t) = A.object [ "n"     A..= n
+                                   , "title" A..= t
+                                   ]
+
 instance Metadata Header where
-    asMetadata (n, title) = [ ("n"    , toJSON n    )
-                            , ("title", toJSON title)
-                            ]
+    asMetadata (Header n title) =
+        [ ("n"    , toJSON n    )
+        , ("title", toJSON title)
+        ]
+
+instance Buildable Header where
+    build (Header n t) = F.build "{}. {}" (n, t)
 
 data MetadataTarget
     = TargetNone
@@ -151,22 +172,22 @@ data Chunk
 $(makeClassy ''Chunk)
 
 chunkVolumeID :: Lens' Chunk Int
-chunkVolumeID = chunkVolume . _1
+chunkVolumeID = chunkVolume . headerN
 
 chunkVolumeTitle :: Lens' Chunk Title
-chunkVolumeTitle = chunkVolume . _2
+chunkVolumeTitle = chunkVolume . headerTitle
 
 chunkChapterID :: Lens' Chunk Int
-chunkChapterID = chunkChapter . _1
+chunkChapterID = chunkChapter . headerN
 
 chunkChapterTitle :: Lens' Chunk Title
-chunkChapterTitle = chunkChapter . _2
+chunkChapterTitle = chunkChapter . headerTitle
 
 chunkParagraphID :: Lens' Chunk Int
-chunkParagraphID = chunkParagraph . _1
+chunkParagraphID = chunkParagraph . headerN
 
 chunkParagraphTitle :: Lens' Chunk Title
-chunkParagraphTitle = chunkParagraph . _2
+chunkParagraphTitle = chunkParagraph . headerTitle
 
 instance NFData Chunk
 
@@ -250,22 +271,22 @@ data ContentBlock                           -- ^ CD I.1.1.§.N
 $(makeClassy ''ContentBlock)
 
 blockVolumeID :: Lens' ContentBlock Int
-blockVolumeID = blockVolume . _1
+blockVolumeID = blockVolume . headerN
 
 blockVolumeTitle :: Lens' ContentBlock Title
-blockVolumeTitle = blockVolume . _2
+blockVolumeTitle = blockVolume . headerTitle
 
 blockChapterID :: Lens' ContentBlock Int
-blockChapterID = blockChapter . _1
+blockChapterID = blockChapter . headerN
 
 blockChapterTitle :: Lens' ContentBlock Title
-blockChapterTitle = blockChapter . _2
+blockChapterTitle = blockChapter . headerTitle
 
 blockParagraphID :: Lens' ContentBlock Int
-blockParagraphID = blockParagraph . _1
+blockParagraphID = blockParagraph . headerN
 
 blockParagraphTitle :: Lens' ContentBlock Title
-blockParagraphTitle = blockParagraph . _2
+blockParagraphTitle = blockParagraph . headerTitle
 
 instance NFData ContentBlock
 
@@ -345,16 +366,16 @@ data Paragraph c
 $(makeLenses ''Paragraph)
 
 paragraphVolumeID :: Lens' (Paragraph c) Int
-paragraphVolumeID = paragraphVolume . _1
+paragraphVolumeID = paragraphVolume . headerN
 
 paragraphVolumeTitle :: Lens' (Paragraph c) Title
-paragraphVolumeTitle = paragraphVolume . _2
+paragraphVolumeTitle = paragraphVolume . headerTitle
 
 paragraphChapterID :: Lens' (Paragraph c) Int
-paragraphChapterID = paragraphChapter . _1
+paragraphChapterID = paragraphChapter . headerN
 
 paragraphChapterTitle :: Lens' (Paragraph c) Title
-paragraphChapterTitle = paragraphChapter . _2
+paragraphChapterTitle = paragraphChapter . headerTitle
 
 instance NFData c => NFData (Paragraph c)
 
@@ -369,9 +390,8 @@ instance Metadata (Paragraph c) where
     asMetadata p = [ ("volume"   , toJSON (p ^. paragraphVolume))
                    , ("part"     , toJSON (p ^. paragraphPart))
                    , ("chapter"  , toJSON (p ^. paragraphChapter))
-                   , ( "paragraph"
-                     , toJSON (p ^. paragraphN, p ^. paragraphTitle)
-                     )
+                   , ("paragraph", toJSON (Header (p ^. paragraphN)
+                                                  (p ^. paragraphTitle)))
                    ]
 
 instance Titled (Paragraph c) where
@@ -438,10 +458,10 @@ data Chapter c
 $(makeLenses ''Chapter)
 
 chapterVolumeID :: Lens' (Chapter c) Int
-chapterVolumeID = chapterVolume . _1
+chapterVolumeID = chapterVolume . headerN
 
 chapterVolumeTitle :: Lens' (Chapter c) Title
-chapterVolumeTitle = chapterVolume . _2
+chapterVolumeTitle = chapterVolume . headerTitle
 
 instance NFData c => NFData (Chapter c)
 
@@ -507,10 +527,10 @@ data Part c
 $(makeLenses ''Part)
 
 partVolumeID :: Lens' (Part c) Int
-partVolumeID = partVolume . _1
+partVolumeID = partVolume . headerN
 
 partVolumeTitle :: Lens' (Part c) Title
-partVolumeTitle = partVolume . _2
+partVolumeTitle = partVolume . headerTitle
 
 instance NFData c => NFData (Part c)
 
@@ -564,9 +584,10 @@ instance Eq c => Ord (Volume c) where
     compare = comparing _volumeN
 
 instance Metadata (Volume c) where
-    asMetadata v = [("volume", toJSON ( v ^. volumeN
-                                      , v ^. volumeTitle
-                                      ))]
+    asMetadata v = [("volume", toJSON ([ ("n"    , toJSON (v ^. volumeN))
+                                       , ("title", toJSON (getTitle v))
+                                       ] :: Object)
+                    )]
 
 instance Titled (Volume c) where
     getTitle v = TL.toStrict
@@ -583,7 +604,7 @@ instance Filed (Volume c) where
 instance ToNamedRecord (Volume c) where
     toNamedRecord v =
         namedRecord [ "volume_n"        .= (v ^. volumeN)
-                    , "volume_title"    .= (v ^. volumeTitle)
+                    , "volume_title"    .= getTitle v
                     ]
 
 instance DefaultOrdered (Volume c) where
