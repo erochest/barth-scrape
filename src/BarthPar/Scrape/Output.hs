@@ -32,59 +32,60 @@ import           BarthPar.Scrape.Utils
 
 findFileName :: Format -> Int -> Scrape FilePath
 findFileName template n = do
-  exists <- scrapeIO $ doesFileExist filename
-  if exists
-  then findFileName template $ succ n
-  else return filename
-  where
-    filename = TL.unpack . format template . Only $ left 3 '0' n
+    exists <- scrapeIO $ doesFileExist filename
+    if exists
+        then findFileName template $ succ n
+        else return filename
+    where
+        filename = TL.unpack . format template . Only $ left 3 '0' n
 
 cleanOutputs :: FilePath -> Scrape ()
 cleanOutputs outputDir = do
-  ensureClean outputDir
-  debugging $
-       ensureClean "dump"
-  where
-    ensureClean :: FilePath -> Scrape ()
-    ensureClean dirname = scrapeIO $ do
-                            exists <- doesDirectoryExist dirname
-                            when exists $
-                                 removeDirectoryRecursive dirname
-                            createDirectoryIfMissing True dirname
+    ensureClean outputDir
+    debugging $
+        ensureClean "dump"
+    where
+        ensureClean :: FilePath -> Scrape ()
+        ensureClean dirname = scrapeIO $ do
+            exists <- doesDirectoryExist dirname
+            when exists $
+                removeDirectoryRecursive dirname
+            createDirectoryIfMissing True dirname
 
 dumpPage :: String -> XML.Document -> Scrape (Maybe String, XML.Document)
 dumpPage source doc = debugging' (Nothing, doc) $ do
-  filename <- findFileName "dump/{}-page.html" 0
-  scrapeIO $ withFile filename WriteMode $ \f -> do
-                     TIO.hPutStrLn f "<!--"
-                     hprint f "source: {}\n" $ Only source
-                     TIO.hPutStrLn f "-->\n"
-                     TIO.hPutStr f . TL.toStrict
-                            $ XML.renderText (XML.def
-                                             { rsPretty = True
-                                             }) doc
-  return (Just filename, doc)
+    filename <- findFileName "dump/{}-page.html" 0
+    scrapeIO $ withFile filename WriteMode $ \f -> do
+        TIO.hPutStrLn f "<!--"
+        hprint f "source: {}\n" $ Only source
+        TIO.hPutStrLn f "-->\n"
+        TIO.hPutStr f . TL.toStrict
+            $ XML.renderText (XML.def
+                             { rsPretty = True
+                             }) doc
+
+    return (Just filename, doc)
 
 dumpPrint :: Show a => String -> a -> Scrape a
 dumpPrint source x = debugging' x $ do
-  filename <- findFileName "dump/{}-show.html" 0
-  scrapeIO $ withFile filename WriteMode $ \f -> do
-                       TIO.hPutStrLn f "---"
-                       hprint f "source: {}\n" $ Only source
-                       TIO.hPutStrLn f "---\n"
-                       TIO.hPutStrLn f . T.pack $ groom x
-  return x
+    filename <- findFileName "dump/{}-show.html" 0
+    scrapeIO $ withFile filename WriteMode $ \f -> do
+        TIO.hPutStrLn f "---"
+        hprint f "source: {}\n" $ Only source
+        TIO.hPutStrLn f "---\n"
+        TIO.hPutStrLn f . T.pack $ groom x
+    return x
 
 dumpText :: String -> T.Text -> Scrape T.Text
 dumpText source x = debugging' x $ do
-  filename <- findFileName "dump/{}-text.html" 0
-  scrapeIO . TIO.writeFile filename $ mconcat
-               [ "---\n"
-               , T.pack source, "\n"
-               , "===\n"
-               , x
-               ]
-  return x
+    filename <- findFileName "dump/{}-text.html" 0
+    scrapeIO . TIO.writeFile filename $ mconcat
+        [ "---\n"
+        , T.pack source, "\n"
+        , "===\n"
+        , x
+        ]
+    return x
 
 dumpEl :: String -> XML.Element -> Scrape XML.Element
 dumpEl source e = debugging' e $ do
@@ -93,17 +94,16 @@ dumpEl source e = debugging' e $ do
 
 writeOutput :: FilePath -> Output -> Scrape ()
 writeOutput outputDir Output{..} = do
-  mdTarget <- view scrapeMetadata
-  scrapeIO . withFile (outputDir </> _outputFilePath) WriteMode $
-               \h -> do
-                 case mdTarget of
-                   TargetNone -> return ()
-                   TargetYamlHeader -> B8.hPut h (encode _outputMetadata)
-                                       >> B8.hPutStrLn h "\n---\n\n"
-                   TargetJSON -> BL.writeFile (_outputFilePath -<.> "json")
-                                 $ A.encode _outputMetadata
-                   TargetCSV  -> return ()
-                 B8.hPutStr h . BL.toStrict . encodeUtf8 $ toLazyText _outputContent
+    mdTarget <- view scrapeMetadata
+    scrapeIO . withFile (outputDir </> _outputFilePath) WriteMode $ \h -> do
+        case mdTarget of
+            TargetNone -> return ()
+            TargetYamlHeader -> B8.hPut h (encode _outputMetadata)
+                             >> B8.hPutStrLn h "\n---\n\n"
+            TargetJSON -> BL.writeFile (_outputFilePath -<.> "json")
+                       $  A.encode _outputMetadata
+            TargetCSV  -> return ()
+        B8.hPutStr h . BL.toStrict . encodeUtf8 $ toLazyText _outputContent
 
 wrapNodes :: [XML.Node] -> XML.Document
 wrapNodes nds =
@@ -117,7 +117,7 @@ writeNodes filename nds = do
     writeDoc filename doc
     return doc
     where
-      doc = wrapNodes nds
+        doc = wrapNodes nds
 
 writeDoc :: FilePath -> XML.Document -> Scrape ()
 writeDoc filename doc =
@@ -125,9 +125,9 @@ writeDoc filename doc =
 
 writePairs :: FilePath -> [(T.Text, T.Text)] -> Scrape ()
 writePairs filename = scrapeIO
-                      . TIO.writeFile filename
-                      . T.unlines
-                      . map (\(a, b) -> T.concat [a, "\t", b])
+                    . TIO.writeFile filename
+                    . T.unlines
+                    . map (\(a, b) -> T.concat [a, "\t", b])
 
 writeCsv :: FilePath -> [CsvOutput] -> Scrape ()
 writeCsv csvFilePath cs@(c:_) =

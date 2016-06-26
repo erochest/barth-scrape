@@ -36,20 +36,20 @@ import           BarthPar.Utils         hiding (paragraphs)
 
 makeChapter :: Title -> Title -> [Cursor] -> PureScript (Chapter ContentBlock)
 makeChapter vTitle title (h:a:cs) = do
-    cloc       <- first ("Error parsing volume ID: " ++)
-               $  parseChapterLoc vTitle title
+    cloc <- first ("Error parsing volume ID: " ++)
+         $  parseChapterLoc vTitle title
     let v  = Header (_locVolume cloc) vTitle
         p' = _locPart cloc
         c  = _locChapter cloc
         c' = Header c title
-    abst       <-  pure
-               .   flip (ContentBlock v p' c' (Header 0 "Abstract") 0) ""
-               .   normalizeWrap
-               .   render
-               .   foldMap cleanText
-               <$> forceList "Missing abstract"
-               (   a' ^.. traverse . to node . _Element
-               )
+    abst <-  pure
+         .   flip (ContentBlock v p' c' (Header 0 "Abstract") 0) ""
+         .   normalizeWrap
+         .   render
+         .   foldMap cleanText
+         <$> forceList "Missing abstract"
+         (   a' ^.. traverse . to node . _Element
+         )
     paragraphs <- readParagraphs v p' c' cs'
     return $ Chapter v p' abst c title paragraphs
     where

@@ -37,16 +37,16 @@ scrape :: Bool                      -- ^ Print debugging output?
        -> Either FilePath String    -- ^ The input.
        -> Script ()
 scrape debug clean mdata chunkings outputDir inputRoot = toScript debug mdata $ do
-  when clean $
-       cleanOutputs outputDir
-  input <- case fmap parseURI inputRoot of
-             Right (Just uri) -> return $ Right uri
-             Left filePath    -> return $ Left filePath
-             Right Nothing    -> throwS "Invalid root URL."
-  outputs <- Chunks.chunk chunkings mdata <$> scrapeTOC input
-  mapM_ (writeOutput outputDir) outputs
-  when (mdata == TargetCSV) $
-    writeCsv (outputDir </> "corpus.csv") $ mapMaybe _outputCsv outputs
+    when clean $
+        cleanOutputs outputDir
+    input <- case fmap parseURI inputRoot of
+                Right (Just uri) -> return $ Right uri
+                Left filePath    -> return $ Left filePath
+                Right Nothing    -> throwS "Invalid root URL."
+    outputs <- Chunks.chunk chunkings mdata <$> scrapeTOC input
+    mapM_ (writeOutput outputDir) outputs
+    when (mdata == TargetCSV) $
+        writeCsv (outputDir </> "corpus.csv") $ mapMaybe _outputCsv outputs
 
 scrapeTOC :: InputSource -> Scrape (Corpus ContentBlock)
 scrapeTOC input =
