@@ -17,6 +17,7 @@ import           Data.Text.Lazy.Builder
 import           Data.Tuple             (swap)
 
 import           BarthPar.Scrape.Types
+import           BarthPar.Utils
 
 
 chunk :: Chunking -> MetadataTarget -> Corpus ContentBlock -> [Output]
@@ -102,7 +103,7 @@ rechunk size bs@(b:_) = uncurry (L.zipWith3 c [0 :: Int ..])
                       . fmap swap
                       . mapMaybe ( sequenceA
                                  . swap
-                                 . (headZ `bimap` (TL.toStrict . TL.unwords))
+                                 . (headZ `bimap` (normalizeWrap . TL.toStrict . TL.unwords))
                                  )
                       . fmap L.unzip
                       . window size (floor $ fromIntegral size / (2.0 :: Double))
@@ -129,4 +130,3 @@ window len offset = go 0 Seq.empty
                 s'  = s |> a
                 s'' = Seq.drop offset s'
         go _ _ _ = []
-
