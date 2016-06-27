@@ -6,12 +6,14 @@ module BarthPar.Scrape.Utils where
 
 import           Control.Applicative
 import           Control.Error
-import           Control.Lens
+import           Control.Lens          hiding ((|>))
 import           Control.Monad.Reader
 import           Data.Foldable
-import qualified Data.Text              as T
-import           Data.Text.Format       as F
-import qualified Data.Text.Lazy         as TL
+import           Data.Sequence         ((|>))
+import qualified Data.Sequence         as Seq
+import qualified Data.Text             as T
+import           Data.Text.Format      as F
+import qualified Data.Text.Lazy        as TL
 import           Data.Text.Read
 import           Debug.Trace
 import           Text.Groom
@@ -55,6 +57,10 @@ forceM e xs = if x == mempty
     where
         x = fold xs
 
+forceList :: String -> [a] -> PureScript [a]
+forceList e [] = Left e
+forceList _ xs = Right xs
+
 smapConcurrently :: Traversable t => (a -> Scrape b) -> t a -> Scrape (t b)
 -- smapConcurrently f = scriptIO . mapConcurrently (runScript . f)
 smapConcurrently = mapM
@@ -62,10 +68,10 @@ smapConcurrently = mapM
 decimalPS :: Integral a => T.Text -> PureScript a
 decimalPS input =
     case decimal input of
-      Right (i, lo)
-          | T.null lo -> Right i
-          | otherwise -> Left  $ "Trailing input: \"" ++ T.unpack lo ++ "\""
-      Left e          -> Left  $ "decimalPS: " ++ e
+        Right (i, lo)
+            | T.null lo -> Right i
+            | otherwise -> Left  $ "Trailing input: \"" ++ T.unpack lo ++ "\""
+        Left e          -> Left  $ "decimalPS: " ++ e
 
 fromRomanPS :: T.Text -> PureScript Int
 fromRomanPS s = note ("Unable to parse " ++ show s) $ fromRoman s
@@ -77,21 +83,25 @@ anyNumberPS t =   decimalPS t
 
 debugging :: Scrape () -> Scrape ()
 debugging s = do
-  debug <- view scrapeDebugging
-  when debug s
+    debug <- view scrapeDebugging
+    when debug s
 
 debugging' :: a -> Scrape a -> Scrape a
 debugging' a s = do
-  debug <- view scrapeDebugging
-  if debug
-  then s
-  else return a
-
-flattenSections :: Page -> FilePath -> [SectionPage]
-flattenSections p fp = fmap (flip (SectionPage p) fp . Just) $ p ^. pageContent
+    debug <- view scrapeDebugging
+    if debug
+    then s
+    else return a
 
 mdLink :: T.Text -> String -> T.Text
 mdLink title uri = TL.toStrict $ F.format "[{}]({})" (title, uri)
 
 mdLink' :: T.Text -> String -> String
 mdLink' text = T.unpack . mdLink text
+
+window :: Int -> Int -> [a] -> [[a]]
+window len offset = go Seq.empty
+    where
+        go :: Seq.Seq [a] -> [a] -> [[a]]
+        go accum [] = toList accum
+        go accum xs = go (accum |> take len xs) $ drop offset xs

@@ -114,7 +114,7 @@ spec = do
                 "link 1 link 2"
         it "should walk depth first." $
             "<span>a<span>b</span>c<span><span>d</span>e\
-            \<span>f</span></span></span>" `shouldBuild` "abcdef"
+            \<span>f</span></span></span>" `shouldBuild` "ab cd ef"
         it "should property pull text from heavily noted and quoted text." $
             let input = "<span class=\"excursus\">\
                         \ <p>\

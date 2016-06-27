@@ -17,6 +17,9 @@ INPUT=barth.1000
 # CHUNK_SIZE=1048576
 CHUNK_SIZE=33554432
 
+CHUNK=500
+METADATA=csv
+
 # URL=http://solomon.dkbl.alexanderstreet.com/cgi-bin/asp/philo/dkbl/volumes_toc.pl?&church=ON
 URL=$(HOME)/'c/solomon.dkbl.alexanderstreet.com/cgi-bin/asp/philo/dkbl/volumes_toc.pl?&church=ON.html'
 
@@ -36,14 +39,48 @@ open:
 run: build
 	rm -f dump/*
 	stack exec -- barth-par scrape --clean --output output/ \
-		--root-file $(URL) --metadata csv
-		# --debug \
+		--debug \
+		--chunking paragraph \
+		--root-file $(URL) --metadata $(METADATA)
+
+chunks: build chunk-volume chunk-part chunk-chapter chunk-paragraph chunk-block chunk-chunk
+
+chunk-volume: build
+	stack exec -- barth-par scrape --output output/volume \
+		--chunking volume --root-file $(URL) --metadata $(METADATA)
+		# \ --debug &> dump/chunk-volume.log
+
+chunk-part: build
+	stack exec -- barth-par scrape --output output/part \
+		--chunking part --root-file $(URL) --metadata $(METADATA)
+		# \ --debug &> dump/chunk-part.log
+
+chunk-chapter: build
+	stack exec -- barth-par scrape --output output/chapter \
+		--chunking chapter --root-file $(URL) --metadata $(METADATA)
+		# \ --debug &> dump/chunk-chapter.log
+
+chunk-paragraph: build
+	stack exec -- barth-par scrape --output output/paragraph \
+		--chunking paragraph --root-file $(URL) --metadata $(METADATA)
+		# \ --debug &> dump/chunk-paragraph.log
+
+chunk-block: build
+	stack exec -- barth-par scrape --output output/block \
+		--chunking block --root-file $(URL) --metadata $(METADATA)
+		# \ --debug &> dump/chunk-block.log
+
+chunk-chunk: build
+	stack exec -- barth-par scrape --output output/chunk \
+		--chunking $(CHUNK) --root-file $(URL) --metadata $(METADATA)
+		# \ --debug &> dump/chunk-chunk.log
 
 single/run.out: build
 	stack exec -- barth-par page \
 		--input    /Users/err8n/c/solomon.dkbl.alexanderstreet.com/cgi-bin/asp/philo/dkbl/getobject.pl?c.830:1.barth.html \
-		--metadata csv     \
+		--metadata $(METADATA) \
 		--output   single/ \
+		--chunking paragraph \
 		&> single/run.out
 
 bench: build
@@ -92,9 +129,13 @@ hlint:
 clean:
 	stack clean
 	-rm -rf *.hp *.prof *.ps *.aux
+	-rm -rf *.out
 	codex cache clean
 
 distclean: clean
+	-rm -rf output
+	-rm -rf single
+	-rm -rf dump
 
 build:
 	stack build $(FLAGS)
@@ -110,4 +151,6 @@ restart: distclean build
 
 rebuild: clean build
 
-.PHONY: all init configure test bench package upload configure install tags hlint clean distclean build watch restart rebuild
+.PHONY: all init configure test bench package upload configure install tags
+.PHONY: hlint clean distclean build watch restart rebuild
+.PHONY: chunk-volume chunk-part chunk-chapter chunk-paragraph chunk-block chunk-chunk chunks

@@ -22,6 +22,7 @@ library
                      , BarthPar.Lens
                      , BarthPar.Parallel
                      , BarthPar.Scrape
+                     , BarthPar.Scrape.Chunks
                      , BarthPar.Scrape.Network
                      , BarthPar.Scrape.Output
                      , BarthPar.Scrape.Read
@@ -32,7 +33,14 @@ library
                      , BarthPar.Types
                      , BarthPar.Utils
                      , BarthPar.XML
-  -- other-modules:
+  other-modules:       BarthPar.Scrape.Types.DOM
+                     , BarthPar.Scrape.Types.Filed
+                     , BarthPar.Scrape.Types.Internals
+                     , BarthPar.Scrape.Types.Lens
+                     , BarthPar.Scrape.Types.Metadata
+                     , BarthPar.Scrape.Types.Scrape
+                     , BarthPar.Scrape.Types.Titled
+                     , BarthPar.Scrape.Types.Utils
   -- other-extensions:
   build-depends:       base >=4.8 && <4.9
                      , aeson
@@ -53,6 +61,7 @@ library
                      , hashable
                      , html-conduit
                      , lens
+                     , lucid
                      , mtl
                      , network-uri
                      , parallel
@@ -106,7 +115,8 @@ test-suite barth-par-specs
   ghc-options:         -threaded -rtsopts -O2
   hs-source-dirs:      specs
   main-is:             Specs.hs
-  other-modules:       BarthPar.Scrape.XMLSpec
+  other-modules:       BarthPar.Scrape.UtilsSpec
+                     , BarthPar.Scrape.XMLSpec
   build-depends:       base >=4.8 && <4.9
                      , barth-par
                      , QuickCheck

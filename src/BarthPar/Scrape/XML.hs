@@ -14,8 +14,8 @@ import qualified Data.Text.Lazy         as TL
 import           Data.Text.Lazy.Builder
 import           Prelude                hiding (div, span)
 import           Text.XML
-import           Text.XML.Cursor
-import           Text.XML.Lens          (nodes)
+import           Text.XML.Cursor        hiding (attribute)
+import           Text.XML.Lens          hiding (attributeIs)
 
 
 isContent :: T.Text -> Cursor -> Bool
@@ -83,3 +83,12 @@ buildText' (NodeElement     e) b = foldr buildText' (singleton ' ' <> b) $ eleme
 buildText' (NodeInstruction _) b = b
 buildText' (NodeContent     c) b = fromText c <> b
 buildText' (NodeComment     _) b = b
+
+isCenter :: Element -> Bool
+isCenter = (== "center") . view name
+
+isNoteLink :: Element -> Bool
+isNoteLink e = e ^. name == "a" && e ^. text == "[note]"
+
+isHiddenNote :: Element -> Bool
+isHiddenNote e = e ^. attribute "class" == Just "hiddennote"

@@ -30,6 +30,7 @@ data Actions
     , scrapeClean     :: !Bool
     , scrapeInput     :: !(Either FilePath String)
     , scrapeMetadata  :: !MetadataTarget
+    , scrapeChunks    :: !Chunking
     , scrapeOutputDir :: !FilePath
     }
     | ScrapePage
@@ -37,6 +38,7 @@ data Actions
     , pageVolume    :: !T.Text
     , pageTitle     :: !T.Text
     , pageMetadata  :: !MetadataTarget
+    , pageChunks    :: !Chunking
     , pageOutputDir :: !FilePath
     }
     deriving (Show)
