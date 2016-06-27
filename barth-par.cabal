@@ -33,7 +33,14 @@ library
                      , BarthPar.Types
                      , BarthPar.Utils
                      , BarthPar.XML
-  -- other-modules:
+  other-modules:       BarthPar.Scrape.Types.DOM
+                     , BarthPar.Scrape.Types.Filed
+                     , BarthPar.Scrape.Types.Internals
+                     , BarthPar.Scrape.Types.Lens
+                     , BarthPar.Scrape.Types.Metadata
+                     , BarthPar.Scrape.Types.Scrape
+                     , BarthPar.Scrape.Types.Titled
+                     , BarthPar.Scrape.Types.Utils
   -- other-extensions:
   build-depends:       base >=4.8 && <4.9
                      , aeson
