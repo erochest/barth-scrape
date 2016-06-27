@@ -84,8 +84,8 @@ scrapePage volName pageName input = do
 
 wrapVolume :: Eq a => [Part a] -> [Volume a]
 wrapVolume = mapMaybe volume
-           . L.groupBy ((==) `on` _partVolume)
-           . L.sortBy (comparing _partVolume)
+           . L.groupBy ((==) `on` (_headerN . _partVolume))
+           . L.sortBy (comparing (_headerN . _partVolume))
     where
         volume :: Eq a => [Part a] -> Maybe (Volume a)
         volume ps@(Part{_partVolume=(Header vn vt)}:_) =
