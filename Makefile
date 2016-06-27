@@ -18,7 +18,7 @@ INPUT=barth.1000
 CHUNK_SIZE=33554432
 
 CHUNK=500
-METADATA=yaml
+METADATA=csv
 
 # URL=http://solomon.dkbl.alexanderstreet.com/cgi-bin/asp/philo/dkbl/volumes_toc.pl?&church=ON
 URL=$(HOME)/'c/solomon.dkbl.alexanderstreet.com/cgi-bin/asp/philo/dkbl/volumes_toc.pl?&church=ON.html'
