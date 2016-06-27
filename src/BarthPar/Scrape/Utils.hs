@@ -6,9 +6,11 @@ module BarthPar.Scrape.Utils where
 
 import           Control.Applicative
 import           Control.Error
-import           Control.Lens
+import           Control.Lens          hiding ((|>))
 import           Control.Monad.Reader
 import           Data.Foldable
+import           Data.Sequence         ((|>))
+import qualified Data.Sequence         as Seq
 import qualified Data.Text             as T
 import           Data.Text.Format      as F
 import qualified Data.Text.Lazy        as TL
@@ -96,3 +98,16 @@ mdLink title uri = TL.toStrict $ F.format "[{}]({})" (title, uri)
 
 mdLink' :: T.Text -> String -> String
 mdLink' text = T.unpack . mdLink text
+
+-- | Based off of http://stackoverflow.com/a/27727244/34864
+window :: Int -> Int -> [a] -> [[a]]
+window len offset = go 0 Seq.empty
+    where
+        go n s (a:as) | n' <  len = go n' s' as
+                      | n' == len = toList s'  : go n' s' as
+                      | otherwise = toList s'' : go n s'' as
+            where
+                n'  = n + 1
+                s'  = s |> a
+                s'' = Seq.drop offset s'
+        go _ _ _ = []

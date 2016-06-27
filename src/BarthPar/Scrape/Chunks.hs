@@ -7,16 +7,14 @@ module BarthPar.Scrape.Chunks where
 import           Control.Error
 import           Control.Lens           hiding ((|>))
 import           Data.Csv
-import           Data.Foldable
 import qualified Data.List              as L
-import           Data.Sequence          ((|>))
-import qualified Data.Sequence          as Seq
 import           Data.Text.Buildable
 import qualified Data.Text.Lazy         as TL
 import           Data.Text.Lazy.Builder
 import           Data.Tuple             (swap)
 
 import           BarthPar.Scrape.Types
+import           BarthPar.Scrape.Utils (window)
 import           BarthPar.Utils
 
 
@@ -117,16 +115,3 @@ rechunk size bs@(b:_) = uncurry (L.zipWith3 c [0 :: Int ..])
         c = Chunk (_blockVolume b) (_blockPart b) (_blockChapter b)
                   (_blockParagraph b)
 rechunk _ _ = []
-
--- | Based off of http://stackoverflow.com/a/27727244/34864
-window :: Int -> Int -> [a] -> [[a]]
-window len offset = go 0 Seq.empty
-    where
-        go n s (a:as) | n' <  len = go n' s' as
-                      | n' == len = toList s'  : go n' s' as
-                      | otherwise = toList s'' : go n s'' as
-            where
-                n'  = n + 1
-                s'  = s |> a
-                s'' = Seq.drop offset s'
-        go _ _ _ = []

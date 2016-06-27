@@ -108,7 +108,8 @@ test-suite barth-par-specs
   ghc-options:         -threaded -rtsopts -O2
   hs-source-dirs:      specs
   main-is:             Specs.hs
-  other-modules:       BarthPar.Scrape.XMLSpec
+  other-modules:       BarthPar.Scrape.UtilsSpec
+                     , BarthPar.Scrape.XMLSpec
   build-depends:       base >=4.8 && <4.9
                      , barth-par
                      , QuickCheck
