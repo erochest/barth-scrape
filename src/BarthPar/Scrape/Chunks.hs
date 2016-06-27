@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 
@@ -8,13 +9,17 @@ import           Control.Error
 import           Control.Lens           hiding ((|>))
 import           Data.Csv
 import qualified Data.List              as L
+import           Data.Monoid
+import qualified Data.Text              as T
 import           Data.Text.Buildable
+import           Data.Text.Encoding
 import qualified Data.Text.Lazy         as TL
 import           Data.Text.Lazy.Builder
 import           Data.Tuple             (swap)
+import qualified Data.Vector            as V
 
 import           BarthPar.Scrape.Types
-import           BarthPar.Scrape.Utils (window)
+import           BarthPar.Scrape.Utils  (window)
 import           BarthPar.Utils
 
 
@@ -60,11 +65,13 @@ chunk (SizedChunks s) metaTarget c =
         $ c ^. corpus
 
 withCsv :: (ToNamedRecord a, DefaultOrdered a)
-        => MetadataTarget -> a -> Maybe CsvOutput
-withCsv TargetNone       _ = Nothing
-withCsv TargetYamlHeader _ = Nothing
-withCsv TargetJSON       _ = Nothing
-withCsv TargetCSV r = Just $ CsvOutput (headerOrder r) (toNamedRecord r)
+        => FilePath -> MetadataTarget -> a -> Maybe CsvOutput
+withCsv _  TargetNone       _ = Nothing
+withCsv _  TargetYamlHeader _ = Nothing
+withCsv _  TargetJSON       _ = Nothing
+withCsv fp TargetCSV r        =
+    Just $ CsvOutput ("filename" `V.cons` headerOrder r)
+                     ([("filename", encodeUtf8 $ T.pack fp)] <> toNamedRecord r)
 
 makeOutput :: ( Buildable o
               , Filed o
@@ -74,7 +81,9 @@ makeOutput :: ( Buildable o
               )
            => MetadataTarget -> o -> Output
 makeOutput meta v =
-    Output (getFilePath v) (asMetadata v) (build v) (withCsv meta v)
+    Output outputPath (asMetadata v) (build v) (withCsv outputPath meta v)
+    where
+        outputPath = getFilePath v
 
 rechunkV :: Int -> Volume ContentBlock -> Volume Chunk
 rechunkV size = over (volumeContent . traverse) (rechunkP size)
