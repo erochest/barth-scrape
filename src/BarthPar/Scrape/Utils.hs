@@ -68,10 +68,10 @@ smapConcurrently = mapM
 decimalPS :: Integral a => T.Text -> PureScript a
 decimalPS input =
     case decimal input of
-      Right (i, lo)
-          | T.null lo -> Right i
-          | otherwise -> Left  $ "Trailing input: \"" ++ T.unpack lo ++ "\""
-      Left e          -> Left  $ "decimalPS: " ++ e
+        Right (i, lo)
+            | T.null lo -> Right i
+            | otherwise -> Left  $ "Trailing input: \"" ++ T.unpack lo ++ "\""
+        Left e          -> Left  $ "decimalPS: " ++ e
 
 fromRomanPS :: T.Text -> PureScript Int
 fromRomanPS s = note ("Unable to parse " ++ show s) $ fromRoman s
@@ -83,15 +83,15 @@ anyNumberPS t =   decimalPS t
 
 debugging :: Scrape () -> Scrape ()
 debugging s = do
-  debug <- view scrapeDebugging
-  when debug s
+    debug <- view scrapeDebugging
+    when debug s
 
 debugging' :: a -> Scrape a -> Scrape a
 debugging' a s = do
-  debug <- view scrapeDebugging
-  if debug
-  then s
-  else return a
+    debug <- view scrapeDebugging
+    if debug
+    then s
+    else return a
 
 mdLink :: T.Text -> String -> T.Text
 mdLink title uri = TL.toStrict $ F.format "[{}]({})" (title, uri)
