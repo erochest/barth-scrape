@@ -99,15 +99,9 @@ mdLink title uri = TL.toStrict $ F.format "[{}]({})" (title, uri)
 mdLink' :: T.Text -> String -> String
 mdLink' text = T.unpack . mdLink text
 
--- | Based off of http://stackoverflow.com/a/27727244/34864
 window :: Int -> Int -> [a] -> [[a]]
-window len offset = go 0 Seq.empty
+window len offset = go Seq.empty
     where
-        go n s (a:as) | n' <  len = go n' s' as
-                      | n' == len = toList s'  : go n' s' as
-                      | otherwise = toList s'' : go n s'' as
-            where
-                n'  = n + 1
-                s'  = s |> a
-                s'' = Seq.drop offset s'
-        go _ _ _ = []
+        go :: Seq.Seq [a] -> [a] -> [[a]]
+        go accum [] = toList accum
+        go accum xs = go (accum |> take len xs) $ drop offset xs
