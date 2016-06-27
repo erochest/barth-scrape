@@ -117,7 +117,7 @@ readParagraph v p' ch c = do
                    )
        =<< mapM readHeader (c $/ spanHead)
     cb <- readContent v p' ch h 0 c
-    return ( 0
+    return ( 1
            , Paragraph v p' ch (_headerN h) (_headerTitle h) []
            , S.singleton cb
            )
