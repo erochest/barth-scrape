@@ -43,31 +43,37 @@ run: build
 		--chunking paragraph \
 		--root-file $(URL) --metadata $(METADATA)
 
-chunks: build chunk-volume chunk-part chunk-paragraph chunk-block chunk-chunk
+chunks: build chunk-volume chunk-part chunk-chapter chunk-paragraph chunk-block chunk-chunk
 
 chunk-volume: build
-	stack exec -- barth-par scrape --clean --output output/volume \
+	stack exec -- barth-par scrape --output output/volume \
 		--chunking volume --root-file $(URL) --metadata $(METADATA)
+		# \ --debug &> dump/chunk-volume.log
 
 chunk-part: build
-	stack exec -- barth-par scrape --clean --output output/part \
+	stack exec -- barth-par scrape --output output/part \
 		--chunking part --root-file $(URL) --metadata $(METADATA)
+		# \ --debug &> dump/chunk-part.log
 
 chunk-chapter: build
-	stack exec -- barth-par scrape --clean --output output/chapter \
+	stack exec -- barth-par scrape --output output/chapter \
 		--chunking chapter --root-file $(URL) --metadata $(METADATA)
+		# \ --debug &> dump/chunk-chapter.log
 
 chunk-paragraph: build
-	stack exec -- barth-par scrape --clean --output output/paragraph \
+	stack exec -- barth-par scrape --output output/paragraph \
 		--chunking paragraph --root-file $(URL) --metadata $(METADATA)
+		# \ --debug &> dump/chunk-paragraph.log
 
 chunk-block: build
-	stack exec -- barth-par scrape --clean --output output/block \
+	stack exec -- barth-par scrape --output output/block \
 		--chunking block --root-file $(URL) --metadata $(METADATA)
+		# \ --debug &> dump/chunk-block.log
 
 chunk-chunk: build
-	stack exec -- barth-par scrape --clean --output output/chunk \
+	stack exec -- barth-par scrape --output output/chunk \
 		--chunking $(CHUNK) --root-file $(URL) --metadata $(METADATA)
+		# \ --debug &> dump/chunk-chunk.log
 
 single/run.out: build
 	stack exec -- barth-par page \
