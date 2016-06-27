@@ -1,6 +1,7 @@
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE ExtendedDefaultRules #-}
+{-# LANGUAGE NamedFieldPuns       #-}
+{-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE RecordWildCards      #-}
 
 
 module BarthPar.Scrape.Output where
@@ -19,6 +20,7 @@ import qualified Data.Text.Lazy          as TL
 import           Data.Text.Lazy.Builder
 import           Data.Text.Lazy.Encoding (encodeUtf8)
 import           Data.Yaml.Aeson
+import           Lucid
 import           System.Directory
 import           System.FilePath
 import           System.IO
@@ -68,13 +70,24 @@ dumpPage source doc = debugging' (Nothing, doc) $ do
 
 dumpPrint :: Show a => String -> a -> Scrape a
 dumpPrint source x = debugging' x $ do
-    filename <- findFileName "dump/{}-show.html" 0
+    filename <- findFileName "dump/{}-show.txt" 0
     scrapeIO $ withFile filename WriteMode $ \f -> do
         TIO.hPutStrLn f "---"
         hprint f "source: {}\n" $ Only source
         TIO.hPutStrLn f "---\n"
         TIO.hPutStrLn f . T.pack $ groom x
     return x
+
+dumpHtml :: ToHtml a => T.Text -> a -> Scrape a
+dumpHtml msg a = debugging' a $ do
+    filename <- findFileName "dump/{}-show.html" 0
+    scrapeIO . renderToFile filename $
+        doctypehtml_ $ do
+            title_ $ toHtml msg
+            body_ $ do
+                h1_ $ toHtml msg
+                toHtml a
+    return a
 
 dumpText :: String -> T.Text -> Scrape T.Text
 dumpText source x = debugging' x $ do
@@ -95,6 +108,7 @@ dumpEl source e = debugging' e $ do
 writeOutput :: FilePath -> Output -> Scrape ()
 writeOutput outputDir Output{..} = do
     mdTarget <- view scrapeMetadata
+    scrapeIO $ createDirectoryIfMissing True outputDir
     scrapeIO . withFile (outputDir </> _outputFilePath) WriteMode $ \h -> do
         case mdTarget of
             TargetNone -> return ()

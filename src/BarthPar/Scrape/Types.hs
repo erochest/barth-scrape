@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE ExtendedDefaultRules       #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns             #-}
@@ -36,6 +37,7 @@ import           Data.Text.Lazy.Builder
 import qualified Data.Vector            as V
 import           Data.Yaml              hiding ((.=))
 import           GHC.Generics           hiding (to)
+import           Lucid
 import           Network.URI
 import           Text.Numeral.Roman
 import           Text.XML.Lens          hiding (to, (.=), (|>))
@@ -199,6 +201,17 @@ instance Ord Chunk where
                         &&& _chunkN
                         )
 
+instance ToHtml Chunk where
+    toHtml Chunk{..} =
+        details_ $ do
+            summary_ . toHtml $ F.format "Chunk #{} @ {}" (_chunkN, _chunkStart)
+            div_ $ toHtml _chunkContent
+    toHtmlRaw Chunk{..} =
+        details_ $ do
+            summary_ . toHtmlRaw
+                     $ F.format "Chunk #{} @ {}" (_chunkN, _chunkStart)
+            div_ $ toHtmlRaw _chunkContent
+
 instance Metadata Chunk where
     asMetadata c = [ ("volume"   , toJSON (c ^. chunkVolume))
                    , ("part"     , toJSON (c ^. chunkPart))
@@ -298,6 +311,18 @@ instance Ord ContentBlock where
                         &&& _blockN
                         )
 
+instance ToHtml ContentBlock where
+    toHtml ContentBlock{..} =
+        details_ $ do
+            summary_ . toHtml . F.format "Block #{}" $ F.Only _blockN
+            div_ $ toHtml _blockContent
+            blockquote_ $ toHtml _blockExcursus
+    toHtmlRaw ContentBlock{..} =
+        details_ $ do
+            summary_ . toHtmlRaw . F.format "Block #{}" $ F.Only _blockN
+            div_ $ toHtmlRaw _blockContent
+            blockquote_ $ toHtmlRaw _blockExcursus
+
 instance Metadata ContentBlock where
     asMetadata b = [ ("volume"   , toJSON (b ^. blockVolume))
                    , ("part"     , toJSON (b ^. blockPart))
@@ -386,6 +411,18 @@ instance Eq c => Ord (Paragraph c) where
                         &&& _paragraphN
                         )
 
+instance ToHtml c => ToHtml (Paragraph c) where
+    toHtml Paragraph{..} =
+        details_ $ do
+            summary_ . toHtml
+                     $ F.format "¶ {}. {}" (_paragraphN, _paragraphTitle)
+            mapM_ toHtml _paragraphContent
+    toHtmlRaw Paragraph{..} =
+        details_ $ do
+            summary_ . toHtmlRaw
+                     $ F.format "¶ {}. {}" (_paragraphN, _paragraphTitle)
+            mapM_ toHtmlRaw _paragraphContent
+
 instance Metadata (Paragraph c) where
     asMetadata p = [ ("volume"   , toJSON (p ^. paragraphVolume))
                    , ("part"     , toJSON (p ^. paragraphPart))
@@ -471,12 +508,25 @@ instance Eq c => Ord (Chapter c) where
                         &&& _chapterN
                         )
 
+instance ToHtml c => ToHtml (Chapter c) where
+    toHtml Chapter{..} =
+        details_ $ do
+            summary_ . toHtml
+                     $ F.format "Chapter {}. {}" (_chapterN, _chapterTitle)
+            blockquote_ $ mapM_ toHtml _chapterAbstract
+            mapM_ toHtml _chapterContent
+    toHtmlRaw Chapter{..} =
+        details_ $ do
+            summary_ . toHtmlRaw
+                     $ F.format "Chapter {}. {}" (_chapterN, _chapterTitle)
+            blockquote_ $ mapM_ toHtmlRaw _chapterAbstract
+            mapM_ toHtmlRaw _chapterContent
+
 instance Metadata (Chapter c) where
     asMetadata c = [ ("volume" , toJSON (c ^. chapterVolume))
                    , ("part"   , toJSON (c ^. chapterPart))
-                   , ("chapter", toJSON ( c ^. chapterN
-                                        , c ^. chapterTitle
-                                        ))
+                   , ("chapter", toJSON (Header (c ^. chapterN)
+                                                (c ^. chapterTitle)))
                    ]
 
 instance Titled (Chapter c) where
@@ -537,6 +587,16 @@ instance NFData c => NFData (Part c)
 instance Eq c => Ord (Part c) where
     compare = comparing (_partVolume &&& _partN)
 
+instance ToHtml c => ToHtml (Part c) where
+    toHtml Part{..} =
+        details_ $ do
+            summary_ . toHtml . F.format "Part {}" $ F.Only _partN
+            mapM_ toHtml _partContent
+    toHtmlRaw Part{..} =
+        details_ $ do
+            summary_ . toHtmlRaw . F.format "Part {}" $ F.Only _partN
+            mapM_ toHtml _partContent
+
 instance Metadata (Part c) where
     asMetadata p = [ ("volume" , toJSON (p ^. partVolume))
                    , ("part"   , toJSON (p ^. partN))
@@ -580,6 +640,16 @@ $(makeLenses ''Volume)
 
 instance NFData c => NFData (Volume c)
 
+instance ToHtml c => ToHtml (Volume c) where
+    toHtml Volume{..} =
+        details_ $ do
+            summary_ . toHtml $ F.format "V {}. {}" (_volumeN, _volumeTitle)
+            mapM_ toHtml _volumeContent
+    toHtmlRaw Volume{..} =
+        details_ $ do
+            summary_ . toHtmlRaw $ F.format "V {}. {}" (_volumeN, _volumeTitle)
+            mapM_ toHtmlRaw _volumeContent
+
 instance Eq c => Ord (Volume c) where
     compare = comparing _volumeN
 
@@ -620,6 +690,10 @@ data Corpus c = Corpus { _corpus :: ![Volume c] }
 $(makeLenses ''Corpus)
 
 instance NFData c => NFData (Corpus c)
+
+instance ToHtml c => ToHtml (Corpus c) where
+    toHtml    = mapM_ toHtml . _corpus
+    toHtmlRaw = mapM_ toHtmlRaw . _corpus
 
 data Saved x
     = Saved

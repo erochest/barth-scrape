@@ -54,6 +54,7 @@ library
                      , hashable
                      , html-conduit
                      , lens
+                     , lucid
                      , mtl
                      , network-uri
                      , parallel

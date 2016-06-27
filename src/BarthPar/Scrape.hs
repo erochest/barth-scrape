@@ -43,7 +43,7 @@ scrape debug clean mdata chunkings outputDir inputRoot = toScript debug mdata $ 
                 Right (Just uri) -> return $ Right uri
                 Left filePath    -> return $ Left filePath
                 Right Nothing    -> throwS "Invalid root URL."
-    outputs <- Chunks.chunk chunkings mdata <$> scrapeTOC input
+    outputs <- Chunks.chunk chunkings mdata <$> (dumpHtml "CORPUS" =<< scrapeTOC input)
     mapM_ (writeOutput outputDir) outputs
     when (mdata == TargetCSV) $
         writeCsv (outputDir </> "corpus.csv") $ mapMaybe _outputCsv outputs
